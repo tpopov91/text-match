@@ -714,6 +714,7 @@
       color: transparent;
     }
     .match-layer mark { background: rgba(255, 213, 79, 0.4); color: transparent; border-radius: 2px; }
+    .match-layer mark.diff { background: rgba(255, 152, 0, 0.6); }
     .match-layer mark.space { background: rgba(255, 82, 160, 0.6); }
     .pane .rich-original.image-drop-target { outline: 2px dashed var(--accent, #6d8dff); outline-offset: -5px; }
     .rich-original {
@@ -811,6 +812,9 @@
     ::highlight(compared-selection),
     ::highlight(original-selection) { background: rgba(255, 213, 79, 0.6); color: inherit; }
     /* Runs of two or more spaces (Mark empty space). */
+    /* The difference reached with Next difference, in the result and in Original text. */
+    ::highlight(diff-current) { background: rgba(255, 152, 0, 0.55); color: inherit; }
+    .diff-count { align-self: center; padding: 0 4px; font-size: 12px; color: var(--muted, #8b93a7); white-space: nowrap; }
     ::highlight(empty-space) { background: rgba(255, 82, 160, 0.6); color: inherit; }
 
     ins,
@@ -1068,7 +1072,7 @@
 
     .auto-style-row {
       display: grid;
-      grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1.4fr) auto;
+      grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1.4fr) auto auto;
       align-items: center;
       gap: 8px;
     }
@@ -1497,6 +1501,206 @@
       .workspace-head .controls { grid-column: 1; grid-row: 3; justify-self: stretch; justify-content: center; }
       .compared-editor.expanded .compared-head { flex-direction: row; align-items: center; }
     }
+  
+    /* ==========================================================================
+       Unified close button (red X) used by every window and popup
+       ========================================================================== */
+    .close-x {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--red);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--red);
+      font: 700 15px/1 var(--sans);
+      cursor: pointer;
+      transition: background-color 0.12s, color 0.12s;
+    }
+
+    .close-x:hover,
+    .close-x:focus-visible {
+      background: var(--red);
+      color: #fff;
+      outline: none;
+    }
+
+    .pp-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .pp-head .pp-title {
+      margin: 0;
+      padding-top: 5px;
+    }
+
+    /* Find & Replace: find, replace with, regex, replace all, X on one row */
+    .find-replace-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto auto;
+      align-items: center;
+    }
+
+    .find-replace-panel .pp-status {
+      display: block;
+      margin-top: 6px;
+    }
+
+    .find-replace-panel .pp-status:empty {
+      display: none;
+    }
+
+    @media (max-width: 680px) {
+      .find-replace-grid {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+      }
+
+      .find-replace-grid input[type="text"] {
+        grid-column: 1 / -1;
+      }
+    }
+
+    /* Clear style tags sits at the right end of the top row, directly above Expand editor */
+    #clearStyleTags {
+      flex: none;
+      min-width: 112px;
+      margin-left: auto;
+    }
+
+    .compared-editor:not(.expanded) .compared-toolbar-top .style-buttons {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* One button size everywhere, matching the Compared text toolbar */
+    @media (min-width: 1101px) {
+      .action {
+        min-height: 24px;
+        padding: 3px 8px;
+        font-size: 11px;
+      }
+
+      .close-x {
+        width: 24px;
+        height: 24px;
+        font-size: 13px;
+      }
+    }
+
+    /* Button rows: no scrollbar gap, so labels and buttons sit on one horizontal line.
+       The mouse wheel and a touchpad still scroll the rows sideways. */
+    @media (min-width: 761px) {
+      .editor:not(.expanded) .box-actions:not(.pinned-end),
+      .editor:not(.expanded) .button-scroll,
+      .result-actions {
+        padding-bottom: 0;
+        scrollbar-width: none;
+      }
+
+      .editor:not(.expanded) .box-actions:not(.pinned-end)::-webkit-scrollbar,
+      .editor:not(.expanded) .button-scroll::-webkit-scrollbar,
+      .result-actions::-webkit-scrollbar {
+        display: none;
+      }
+
+      .pinned-end > .expand-button { align-self: center; }
+
+      .compared-toolbar-top,
+      .compared-toolbar-bottom,
+      .original-editor:not(.expanded) .field-head,
+      .result .field-head {
+        align-items: center;
+      }
+    }
+
+    /* Define Phrases: the title, note and Add row are hidden for now, so the panel starts with the capitalize section */
+    #phraseDefineSection[hidden] + .uppercase-section {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .pp-head .close-x {
+      margin-left: auto;
+    }
+
+    .pp-actions-split .pp-spacer {
+      flex: 1;
+    }
+
+    .uppercase-section .pp-status:empty {
+      display: none;
+    }
+
+    /* Red and green pieces of the result can be clicked to mark them in Original / Compared text */
+    #output ins, #output del { cursor: pointer; }
+
+    /* Result toolbar: the buttons on the left scroll, "< 1 / 3 >" and Copy result as text stay pinned to the right edge */
+    .result-actions {
+      overflow: visible;
+    }
+
+    .result-actions > .result-scroll {
+      display: flex;
+      flex: 1 1 auto;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .result-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .result-scroll > * {
+      flex: none;
+    }
+
+    .result-actions > .result-pinned {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    #diffCount {
+      min-width: 48px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 760px) {
+      .result-actions > .result-scroll {
+        flex-wrap: wrap;
+        overflow-x: visible;
+      }
+    }
+
+    #downloadPage {
+      min-width: 0;
+      line-height: 1;
+    }
+
+    .header-right {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* A little air between each toolbar and the box under it */
+    .pane { margin-top: 6px; }
   </style>
 </head>
 
@@ -1601,7 +1805,10 @@
         <span class="brand-tagline">Compare two texts side by side. Spot additions and removals as you type.</span>
       </div>
     </div>
-    <small>Private · Runs in your browser</small>
+    <div class="header-right">
+      <button id="downloadPage" class="action" type="button" title="Download this tool as a web page (.html) that works offline" aria-label="Download page">&#8595;</button>
+      <small>Private · Runs in your browser</small>
+    </div>
   </header>
 
   <main>
@@ -1650,7 +1857,7 @@
       </div>
 
       <div id="imagePanel" class="phrase-panel image-panel" hidden role="dialog" aria-label="Image tags">
-        <p class="pp-title">Image tags</p>
+        <div class="pp-head"><p class="pp-title">Image tags</p><button id="imageClose" class="close-x" type="button" title="Close" aria-label="Close">✕</button></div>
         <p class="pp-note">Every picture in Original text is listed once, even when it appears several times. Change a number if it is wrong, then press Insert tags to write it beside every copy of that picture. Giving two pictures the same number merges them. Numbers are remembered in this browser, so the same picture gets the same number in every tab and in every new text.</p>
         <div id="imageList" class="image-list"></div>
         <div class="pp-actions">
@@ -1659,7 +1866,7 @@
             <button id="imageRefresh" class="action" type="button" title="Reload the saved numbers and update the tags already in the text">Refresh</button>
             <button id="imageForget" class="action danger" type="button" title="Delete the saved picture numbers (tags already in your texts are kept)">Forget saved numbers</button>
           </span>
-          <button id="imageClose" class="action" type="button">Close</button>
+          
           <span id="imageStatus" class="pp-status" role="status" aria-live="polite"></span>
         </div>
       </div>
@@ -1668,13 +1875,13 @@
         <div class="hotkey-card">
           <div class="hotkey-head">
             <h2 id="hotkeyTitle" style="margin: 0; font-size: 19px;">Keyboard shortcuts</h2>
-            <button id="hotkeysClose" class="action" type="button">Close</button>
+            <button id="hotkeysClose" class="close-x" type="button" title="Close" aria-label="Close">✕</button>
           </div>
           <p class="hotkey-note">Click a shortcut, then press the key combination you want. Shortcuts are saved in this browser profile on this device. Browser-reserved shortcuts may still be handled by the browser or operating system.</p>
           <div id="hotkeyList" class="hotkey-list"></div>
           <div class="hotkey-actions">
             <button id="hotkeysReset" class="action danger" type="button">Reset hotkeys only</button>
-            <button id="hotkeysDone" class="action" type="button">Done</button>
+            
           </div>
         </div>
       </div>
@@ -1711,29 +1918,23 @@
               <div class="compared-toolbar">
                 <div class="compared-toolbar-top">
                   <label for="compared">Compared text</label>
-                  <div class="box-actions style-buttons">
-                    <button id="applyStyle1" class="action apply-auto-style" data-style="STYLE1" type="button">Apply Style 1</button>
-                    <button id="applyStyle2" class="action apply-auto-style" data-style="STYLE2" type="button">Apply Style 2</button>
-                    <button id="applyStyle3" class="action apply-auto-style" data-style="STYLE3" type="button">Apply Style 3</button>
-                    <button id="applyStyle4" class="action apply-auto-style" data-style="STYLE4" type="button">Apply Style 4</button>
-                    <button id="applyStyle5" class="action apply-auto-style" data-style="STYLE5" type="button">Apply Style 5</button>
-                    <button id="clearStyleTags" class="action" type="button" title="Remove all style markers from Compared text while keeping the words">Clear style tags</button>
-                  </div>
+                  <div id="styleButtons" class="box-actions style-buttons"></div>
+                  <button id="clearStyleTags" class="action" type="button" title="Remove all style markers from Compared text while keeping the words">Clear style tags</button>
                 </div>
                 <div class="compared-toolbar-bottom box-actions pinned-end">
                   <div class="button-scroll">
-                    <button id="caseUpper" class="action" type="button" title="Convert visible text to uppercase">UPPERCASE</button>
-                    <button id="caseLower" class="action" type="button" title="Convert visible text to lowercase">lowercase</button>
+                    <button id="caseUpper" class="action" type="button" title="Convert to UPPERCASE: selected text only, or all text when nothing is selected">UPPERCASE</button>
+                    <button id="caseLower" class="action" type="button" title="Convert to lowercase: selected text only, or all text when nothing is selected">lowercase</button>
                     <!-- Proper Case is switched off, not removed. To bring it back: uncomment this button, the caseButtons.proper line and the two caseProper hotkey lines in the script.
                     <button id="caseProper" class="action" type="button" title="Capitalize the first letter of each word">Proper Case</button>
                     -->
-                    <button id="caseSentence" class="action" type="button" title="Capitalize sentence starts; a leading number remains the first character">Sentence case</button>
+                    <button id="caseSentence" class="action" type="button" title="Sentence case: selected text only, or all text when nothing is selected">Sentence case</button>
                     <button id="uppercaseInserted" class="action" type="button" title="Capitalize all configured words and phrases in Compared text">CAPITALIZE MATCHES</button>
                     <button id="markMatchesBtn" class="action" type="button" aria-pressed="false" title="Select a word in Compared text and shade every occurrence of it in this box">Mark all matches</button>
                     <button id="findReplaceToggle" class="action" type="button" aria-expanded="false">Find &amp; Replace</button>
                     <button id="fixComparedSpaces" class="action" type="button" title="Collapse runs of two or more spaces into one in Compared text">Fix spaces</button>
                     <button id="fixComparedGrammar" class="action" type="button" title="Fix punctuation spacing, including adding a space after . ! ? when needed">Fix Grammar</button>
-                    <button id="splitSentencesBtn" class="action" type="button" title="Start a new row after ., ?, !, and ;">New row on each sentence</button>
+                    <button id="splitSentencesBtn" class="action" type="button" title="Put the text on one line, then start a new row after ., ?, ! and ; (not after numbers such as 2. or after .,)">New row on each sentence</button>
                   </div>
                   <button id="expandCompared" class="action expand-button" type="button" aria-pressed="false">Expand editor</button>
                 </div>
@@ -1744,13 +1945,11 @@
               <div class="find-replace-grid">
                 <input id="findCompared" type="text" placeholder="Find in Compared text" spellcheck="false">
                 <input id="replaceCompared" type="text" placeholder="Replace with (empty removes match)" spellcheck="false">
-              </div>
-              <div class="find-replace-actions">
-                <label><input id="findReplaceRegex" type="checkbox"> Regex</label>
+              <label class="style-regex-option" title="Treat the Find text as a regular expression"><input id="findReplaceRegex" type="checkbox"> Regex</label>
                 <button id="findReplaceApply" class="action" type="button">Replace all</button>
-                <button id="findReplaceClose" class="action" type="button">Close</button>
-                <span id="findReplaceStatus" class="pp-status" role="status"></span>
+                <button id="findReplaceClose" class="close-x" type="button" title="Close" aria-label="Close">✕</button>
               </div>
+              <span id="findReplaceStatus" class="pp-status" role="status"></span>
             </div>
 
             <div class="pane">
@@ -1768,22 +1967,34 @@
               <button id="hideTagsBtn" class="action" type="button" aria-pressed="false" title="Toggle visibility of style and image markers in the result display only">Hide tags in result</button>
             </span>
             <div class="result-actions">
+              <div class="result-scroll">
               <button id="phrasesBtn" class="action" type="button" aria-expanded="false">Define Phrases</button>
               <button id="autoStylesBtn" class="action" type="button" aria-expanded="false">Define Styles</button>
               <button id="hlBtn" class="action" type="button" aria-pressed="false" title="Highlight configured capitalization words and style targets">Highlight Phrases</button>
               <button id="markSpaceBtn" class="action" type="button" aria-pressed="false" title="Mark runs of two or more spaces in the result">Mark empty space</button>
+              </div>
+              <div class="result-pinned">
+              <span id="diffCount" class="diff-count" aria-live="polite"></span>
+              <button id="prevDiffBtn" class="action" type="button" title="Previous difference" aria-label="Previous difference" disabled>&lt;</button>
+              <button id="toggleDiffBtn" class="action" type="button" aria-pressed="false" title="Hide or show the orange mark of the current difference in all three boxes">Hide highlight</button>
+              <button id="nextDiffBtn" class="action" type="button" title="Go to the next difference in the result, Original text and Compared text" disabled>&gt;</button>
               <button id="copy" class="action" type="button">Copy result as text</button>
+              </div>
             </div>
           </div>
 
           <div class="output-wrap">
             <div id="phrasePanel" class="phrase-panel" hidden>
-              <p class="pp-title">Define Phrases</p>
-              <p class="pp-note">Stored in this browser. "Apply phrases" swaps them in the comparison result only; your two input texts never change. Matching follows the Case sensitive switch. The number in brackets on the buttons is how many matches were found in the result. Use Export and Import to move your phrases to another browser or share them with someone.</p>
-              <div class="pp-row">
+              <div class="pp-head"><button id="phClose" class="close-x" type="button" title="Close" aria-label="Close">✕</button></div>
+              <!-- Hidden for now: remove the hidden attribute below to bring back the title, the note and the Add row. -->
+              <div id="phraseDefineSection" hidden>
+                <p class="pp-title">Define Phrases</p>
+                <p class="pp-note">Stored in this browser. "Apply phrases" swaps them in the comparison result only; your two input texts never change. Matching follows the Case sensitive switch. The number in brackets on the buttons is how many matches were found in the result. Use Export and Import to move your phrases to another browser or share them with someone.</p>
+                <div class="pp-row">
                 <input id="phFind" type="text" placeholder="Word or phrase to find" spellcheck="false">
                 <input id="phRepl" type="text" placeholder="Replace with (empty removes it)" spellcheck="false">
                 <button id="phAdd" class="action" type="button">Add</button>
+              </div>
               </div>
               <div class="uppercase-section">
                 <p class="pp-title">Capitalize words in Compared text</p>
@@ -1791,16 +2002,15 @@
                 <div class="pp-row">
                   <textarea id="uppercaseTargets" rows="5" wrap="soft" placeholder="Words or phrases, e.g. example, inserted phrase" spellcheck="false" aria-label="Words or phrases to capitalize in Compared text"></textarea>
                 </div>
-                <div class="pp-actions" style="margin-top:6px">
+                <div class="pp-actions pp-actions-split" style="margin-top:6px">
+                  <button id="phExport" class="action" type="button" title="Save phrases, the capitalize list and all styles to one file">Export settings</button>
+                  <button id="phImport" class="action" type="button" title="Load phrases, the capitalize list and styles from an exported file">Import settings</button>
+                  <input id="phFile" type="file" accept=".json,application/json" hidden>
+                  <span class="pp-spacer"></span>
                   <button id="checkDuplicateTargets" class="action" type="button" title="Check the capitalization list for repeated words or phrases">Check duplicates</button>
                   <button id="deleteDuplicateTargets" class="action" type="button" title="Remove repeated words or phrases, keeping the first occurrence">Delete duplicates</button>
-                  <span id="uppercaseStatus" class="pp-status" role="status" aria-live="polite"></span>
                 </div>
-              </div>
-              <div class="pp-actions">
-                <button id="phExport" class="action" type="button">Export phrases</button>
-                <button id="phImport" class="action" type="button">Import phrases</button>
-                <input id="phFile" type="file" accept=".json,application/json" hidden>
+                <span id="uppercaseStatus" class="pp-status" role="status" aria-live="polite"></span>
                 <span id="phStatus" class="pp-status" role="status"></span>
               </div>
               <div id="phList" class="pp-list"></div>
@@ -1811,38 +2021,13 @@
             </div>
 
             <div id="autoStylePanel" class="auto-style-panel" hidden>
-              <p class="pp-title">Define Styles</p>
+              <div class="pp-head"><p class="pp-title">Define Styles</p><button id="closeAutoStyles" class="close-x" type="button" title="Close" aria-label="Close">✕</button></div>
               <p class="pp-note">Set a style name and one or more words or phrases. Separate targets with commas or new lines. Each Apply button adds tags only in Compared text. Matching is case-insensitive. For a style named cat, a match becomes _style_cat_[cat]. Original text is never modified. These rules are separate from Define Phrases.</p>
-              <div class="auto-style-list">
-                <div class="auto-style-row">
-                  <input id="styleName1" type="text" value="Style 1" maxlength="40" aria-label="Style 1 name" placeholder="Style 1 name">
-                  <input id="styleWords1" type="text" aria-label="Words for style 1" placeholder="Words or phrases, e.g. cat, black cat">
-                  <label class="style-regex-option" title="Treat this style's target lines as regular expressions"><input id="styleRegex1" type="checkbox"> Regex</label>
-                </div>
-                <div class="auto-style-row">
-                  <input id="styleName2" type="text" value="Style 2" maxlength="40" aria-label="Style 2 name" placeholder="Style 2 name">
-                  <input id="styleWords2" type="text" aria-label="Words for style 2" placeholder="Words or phrases">
-                  <label class="style-regex-option" title="Treat this style's target lines as regular expressions"><input id="styleRegex2" type="checkbox"> Regex</label>
-                </div>
-                <div class="auto-style-row">
-                  <input id="styleName3" type="text" value="Style 3" maxlength="40" aria-label="Style 3 name" placeholder="Style 3 name">
-                  <input id="styleWords3" type="text" aria-label="Words for style 3" placeholder="Words or phrases">
-                  <label class="style-regex-option" title="Treat this style's target lines as regular expressions"><input id="styleRegex3" type="checkbox"> Regex</label>
-                </div>
-                <div class="auto-style-row">
-                  <input id="styleName4" type="text" value="Style 4" maxlength="40" aria-label="Style 4 name" placeholder="Style 4 name">
-                  <input id="styleWords4" type="text" aria-label="Words for style 4" placeholder="Words or phrases">
-                  <label class="style-regex-option" title="Treat this style's target lines as regular expressions"><input id="styleRegex4" type="checkbox"> Regex</label>
-                </div>
-                <div class="auto-style-row">
-                  <input id="styleName5" type="text" value="Style 5" maxlength="40" aria-label="Style 5 name" placeholder="Style 5 name">
-                  <input id="styleWords5" type="text" aria-label="Words for style 5" placeholder="Words or phrases">
-                  <label class="style-regex-option" title="Treat this style's target lines as regular expressions"><input id="styleRegex5" type="checkbox"> Regex</label>
-                </div>
-              </div>
+              <div id="autoStyleList" class="auto-style-list"></div>
               <div class="pp-actions">
+                <button id="addStyleBtn" class="action" type="button" title="Add another style">Add style</button>
                 <button id="saveStyleNames" class="action" type="button">Save style names and targets</button>
-                <button id="closeAutoStyles" class="action" type="button">Close</button>
+                
                 <span id="autoStyleStatus" class="pp-status" role="status"></span>
               </div>
             </div>
@@ -1874,7 +2059,9 @@
         zoom: 'textCompare.boxZoom.v1',
       };
 
-      const STYLE_IDS = ['STYLE1', 'STYLE2', 'STYLE3', 'STYLE4', 'STYLE5'];
+      const MAX_STYLES = 30;
+      const DEFAULT_STYLE_COUNT = 10;
+      const STYLE_IDS = Array.from({ length: MAX_STYLES }, (_, i) => `STYLE${i + 1}`);
       const LAYOUT_IDS = ['stack', 'rows', 'top-bottom'];
       const MAX_STYLE_NAME_LENGTH = 40;
       const SAFE_NAME_RE = /^[A-Za-z0-9_-]+$/;
@@ -1919,6 +2106,11 @@
         { id: 'style3', label: 'Apply Style 3', fallback: 'Ctrl+Alt+3' },
         { id: 'style4', label: 'Apply Style 4', fallback: 'Ctrl+Alt+4' },
         { id: 'style5', label: 'Apply Style 5', fallback: 'Ctrl+Alt+5' },
+        { id: 'style6', label: 'Apply Style 6', fallback: 'Ctrl+Alt+6' },
+        { id: 'style7', label: 'Apply Style 7', fallback: 'Ctrl+Alt+7' },
+        { id: 'style8', label: 'Apply Style 8', fallback: 'Ctrl+Alt+8' },
+        { id: 'style9', label: 'Apply Style 9', fallback: 'Ctrl+Alt+9' },
+        { id: 'style10', label: 'Apply Style 10', fallback: 'Ctrl+Alt+0' },
         { id: 'fixSpaces', label: 'Fix spaces in Compared text', fallback: 'Ctrl+Alt+S' },
         { id: 'fixGrammar', label: 'Fix Grammar in Compared text', fallback: 'Ctrl+Alt+G' },
         { id: 'splitRows', label: 'New row on each sentence', fallback: 'Ctrl+Alt+Enter' },
@@ -1953,6 +2145,11 @@
       // Fingerprint distance (see fingerprintDistance) up to which two pictures count as the same.
       // Measured on real pastes: copies of one picture scored up to about 15, different pictures 36 or more.
       const FP_MAX_DIFF = 22;
+      // The mean can hide a small difference (a crown on a coin). Copies of one picture differ a little everywhere, so
+      // their worst area stays close to the mean; a real difference sits in one spot. The worst of the 144 areas
+      // (average red/green/blue difference) may therefore exceed the mean by only so much.
+      const FP_WORST_BASE = 15;
+      const FP_WORST_PER_MEAN = 3; // allowed worst area = base + this * mean distance
       const hashText = (text) => { let h = 2166136261; for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); };
       function imageKey(img) { return (img.dataset && img.dataset.group) || img.currentSrc || img.src || ''; }
 
@@ -2041,6 +2238,15 @@
         for (let i = 0; i < a.rgb.length; i++) sum += Math.abs(a.rgb[i] - b.rgb[i]);
         return sum / a.rgb.length + stretch * 20;
       }
+      /** The largest difference in any one area of the two fingerprints. */
+      function fingerprintWorstArea(a, b) {
+        let worst = 0;
+        for (let i = 0; i + 2 < a.rgb.length; i += 3) {
+          const d = (Math.abs(a.rgb[i] - b.rgb[i]) + Math.abs(a.rgb[i + 1] - b.rgb[i + 1]) + Math.abs(a.rgb[i + 2] - b.rgb[i + 2])) / 3;
+          if (d > worst) worst = d;
+        }
+        return worst;
+      }
 
       let fingerprintRunning = false;
       let fingerprintAgain = false;
@@ -2070,10 +2276,15 @@
               if (!fp) { img.dataset.group = `x${hashText(src)}`; changed = true; continue; }
               let best = null;
               let bestDistance = FP_MAX_DIFF;
+              let bestWorst = 0;
               for (const entry of imageLibrary) {
-                const distance = fingerprintDistance(fp, fingerprintOfEntry(entry));
-                if (distance <= bestDistance) { best = entry; bestDistance = distance; }
+                const entryFp = fingerprintOfEntry(entry);
+                const distance = fingerprintDistance(fp, entryFp);
+                if (distance > bestDistance) continue;
+                const worst = fingerprintWorstArea(fp, entryFp);
+                if (worst <= FP_WORST_BASE + FP_WORST_PER_MEAN * distance) { best = entry; bestDistance = distance; bestWorst = worst; }
               }
+              if (best) console.info('[image] same picture as tag', best.number, 'distance', bestDistance.toFixed(1), 'worst area', bestWorst.toFixed(1), `(same when distance <= ${FP_MAX_DIFF} and worst area <= ${FP_WORST_BASE} + ${FP_WORST_PER_MEAN} x distance)`);
               if (!best) {
                 let nearest = null;
                 let nearestDistance = Infinity;
@@ -2109,10 +2320,11 @@
         while (fingerprintRunning) await new Promise((resolve) => setTimeout(resolve, 60));
       }
 
-      function richOriginalText() {
+      // `segs`, when given, receives each text node with its start offset in the returned text.
+      function richOriginalText(segs) {
         let out = '';
         const walk = (node) => {
-          if (node.nodeType === Node.TEXT_NODE) { out += node.nodeValue || ''; return; }
+          if (node.nodeType === Node.TEXT_NODE) { if (segs) segs.push({ node, start: out.length }); out += node.nodeValue || ''; return; }
           if (node.nodeType !== Node.ELEMENT_NODE) return;
           // A picture adds nothing by itself: only a tag typed or inserted next to it (image[_image_N_]) is text.
           // Pictures without a tag are left out of the comparison.
@@ -2297,6 +2509,10 @@
       const highlightButton = $('#hlBtn');
       const hideTagsButton = $('#hideTagsBtn');
       const markSpaceButton = $('#markSpaceBtn');
+      const prevDiffButton = $('#prevDiffBtn');
+      const nextDiffButton = $('#nextDiffBtn');
+      const toggleDiffButton = $('#toggleDiffBtn');
+      const diffCount = $('#diffCount');
       const markMatchesButton = $('#markMatchesBtn');
       const copyButton = $('#copy');
       const clearCacheButton = $('#clearCache');
@@ -2369,7 +2585,7 @@
 
       // A function declaration (hoisted) because createDefaultOptions() calls it during state setup.
       function styleNumber(styleId) {
-        return Number(styleId.slice(-1));
+        return Number(styleId.slice(5));
       }
 
       const sanitizeStyleName = (value) => (typeof value === 'string' && SAFE_NAME_RE.test(value) ? value : '');
@@ -2383,16 +2599,18 @@
           ignoreWhitespace: false,
           hideTags: false,
           markEmptySpace: false,
+          hideDiffHighlight: false,
           markAllMatches: false,
           caseSensitive: true,
           wrap: true,
           layout: 'stack',
           theme: 'green',
+          styleCount: DEFAULT_STYLE_COUNT,
           styleNames: forEachStyle((id) => `Style ${styleNumber(id)}`),
           styleWords: forEachStyle(() => ''),
           styleRegexByStyle: forEachStyle(() => false),
           uppercaseTargets: '',
-          highlightColors: { caps: '#ffd23f', STYLE1: '#4c8dff', STYLE2: '#ff9a3d', STYLE3: '#a35fd6', STYLE4: '#35e69c', STYLE5: '#ff5b61' },
+          highlightColors: Object.assign({ caps: '#ffd23f', STYLE1: '#4c8dff', STYLE2: '#ff9a3d', STYLE3: '#a35fd6', STYLE4: '#35e69c', STYLE5: '#ff5b61', STYLE6: '#4cd6e0', STYLE7: '#e04c9a', STYLE8: '#a0d62e', STYLE9: '#8c7bff', STYLE10: '#ff8a5b' }, Object.fromEntries(STYLE_IDS.slice(10).map((id, i) => [id, `hsl(${(i * 47 + 20) % 360} 70% 60%)`]))),
         };
       }
 
@@ -2503,12 +2721,14 @@
           options.ignoreWhitespace = Boolean(stored.ignoreWhitespace);
           options.hideTags = Boolean(stored.hideTags);
           options.markEmptySpace = Boolean(stored.markEmptySpace);
+          options.hideDiffHighlight = Boolean(stored.hideDiffHighlight);
           options.markAllMatches = Boolean(stored.markAllMatches);
           if (typeof stored.caseSensitive === 'boolean') options.caseSensitive = stored.caseSensitive;
           if (typeof stored.wrap === 'boolean') options.wrap = stored.wrap;
           if (LAYOUT_IDS.includes(stored.layout)) options.layout = stored.layout;
           if (typeof stored.theme === 'string') options.theme = stored.theme;
           if (typeof stored.uppercaseTargets === 'string') options.uppercaseTargets = stored.uppercaseTargets;
+          if (Number.isInteger(stored.styleCount) && stored.styleCount >= 1 && stored.styleCount <= MAX_STYLES) options.styleCount = stored.styleCount;
           if (stored.highlightColors && typeof stored.highlightColors === 'object') {
             for (const key of ['caps', ...STYLE_IDS]) {
               const color = stored.highlightColors[key];
@@ -2667,7 +2887,7 @@
         setPopoverOpen(phrasePanel, phrasesButton, open);
         if (open) {
           setPopoverOpen(autoStylePanel, autoStylesButton, false);
-          phraseFind.focus();
+          uppercaseTargetsInput.focus();
         }
       }
 
@@ -2698,19 +2918,83 @@
           [highlightButton, options.highlight],
           [hideTagsButton, options.hideTags],
           [markSpaceButton, options.markEmptySpace],
+          [toggleDiffButton, options.hideDiffHighlight],
           [markMatchesButton, options.markAllMatches],
           [wrapButton, options.wrap],
         ].forEach(([button, on]) => {
           button.classList.toggle('on', on);
           button.setAttribute('aria-pressed', String(on));
         });
+        toggleDiffButton.textContent = options.hideDiffHighlight ? 'Show highlight' : 'Hide highlight';
         applyWrap();
         syncStyleControls();
         renderTheme();
       }
 
+      const visibleStyleIds = () => STYLE_IDS.slice(0, options.styleCount);
+
+      /** Builds the Apply buttons and the Define Styles rows when their number does not match the style count. */
+      function ensureStyleUi() {
+        const list = $('#autoStyleList');
+        const buttons = $('#styleButtons');
+        if (list.children.length === options.styleCount && buttons.children.length === options.styleCount) return;
+        list.textContent = '';
+        buttons.textContent = '';
+        visibleStyleIds().forEach((id) => {
+          const n = styleNumber(id);
+
+          const row = document.createElement('div');
+          row.className = 'auto-style-row';
+
+          const nameInput = document.createElement('input');
+          nameInput.id = `styleName${n}`;
+          nameInput.type = 'text';
+          nameInput.maxLength = MAX_STYLE_NAME_LENGTH;
+          nameInput.setAttribute('aria-label', `Style ${n} name`);
+          nameInput.placeholder = `Style ${n} name`;
+
+          const wordsInput = document.createElement('input');
+          wordsInput.id = `styleWords${n}`;
+          wordsInput.type = 'text';
+          wordsInput.setAttribute('aria-label', `Words for style ${n}`);
+          wordsInput.placeholder = n === 1 ? 'Words or phrases, e.g. cat, black cat' : 'Words or phrases';
+
+          const regexLabel = document.createElement('label');
+          regexLabel.className = 'style-regex-option';
+          regexLabel.title = "Treat this style's target lines as regular expressions";
+          const regexBox = document.createElement('input');
+          regexBox.id = `styleRegex${n}`;
+          regexBox.type = 'checkbox';
+          regexLabel.append(regexBox, ' Regex');
+
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'action danger style-remove';
+          remove.dataset.style = id;
+          remove.textContent = 'Remove';
+          remove.title = 'Remove this style';
+
+          row.append(nameInput, wordsInput, regexLabel, remove);
+          list.appendChild(row);
+
+          const apply = document.createElement('button');
+          apply.id = `applyStyle${n}`;
+          apply.type = 'button';
+          apply.className = 'action apply-auto-style';
+          apply.dataset.style = id;
+          buttons.appendChild(apply);
+        });
+        updateStyleCountControls();
+      }
+
+      function updateStyleCountControls() {
+        $('#addStyleBtn').disabled = options.styleCount >= MAX_STYLES;
+        document.querySelectorAll('.style-remove').forEach((button) => { button.disabled = options.styleCount <= 1; });
+      }
+
       function syncStyleControls() {
-        for (const id of STYLE_IDS) {
+        ensureStyleUi();
+        for (const id of visibleStyleIds()) {
           const n = styleNumber(id);
           const nameInput = $(`#styleName${n}`);
           const wordsInput = $(`#styleWords${n}`);
@@ -2721,24 +3005,56 @@
           $(`#styleRegex${n}`).checked = Boolean(options.styleRegexByStyle[id]);
           $(`#applyStyle${n}`).textContent = `Apply ${label}`;
         }
+        updateStyleCountControls();
       }
 
       function saveAutoStyleSettings() {
-        const names = {};
-        const words = {};
-        const regexFlags = {};
-
-        for (const id of STYLE_IDS) {
+        for (const id of visibleStyleIds()) {
           const n = styleNumber(id);
-          names[id] = $(`#styleName${n}`).value.trim().slice(0, MAX_STYLE_NAME_LENGTH) || `Style ${n}`;
-          words[id] = $(`#styleWords${n}`).value;
-          regexFlags[id] = $(`#styleRegex${n}`).checked;
+          options.styleNames[id] = $(`#styleName${n}`).value.trim().slice(0, MAX_STYLE_NAME_LENGTH) || `Style ${n}`;
+          options.styleWords[id] = $(`#styleWords${n}`).value;
+          options.styleRegexByStyle[id] = $(`#styleRegex${n}`).checked;
         }
-
-        options.styleNames = names;
-        options.styleWords = words;
-        options.styleRegexByStyle = regexFlags;
         saveOptions();
+        syncStyleControls();
+      }
+
+      function addStyle() {
+        if (options.styleCount >= MAX_STYLES) return;
+        saveAutoStyleSettings();
+        options.styleCount++;
+        saveOptions();
+        syncStyleControls();
+        const input = $(`#styleName${options.styleCount}`);
+        input.focus();
+        input.select();
+        input.scrollIntoView({ block: 'nearest' });
+      }
+
+      /** Removes one style; the styles after it move up one place, and the last slot is reset. */
+      function removeStyle(id) {
+        if (options.styleCount <= 1) return;
+        saveAutoStyleSettings();
+        const ids = visibleStyleIds();
+        const at = ids.indexOf(id);
+        if (at < 0) return;
+        for (let i = at; i < ids.length - 1; i++) {
+          const next = ids[i + 1];
+          const nextName = options.styleNames[next];
+          // A style still called "Style 7" keeps matching its new position.
+          options.styleNames[ids[i]] = /^Style \d+$/.test(nextName) ? `Style ${i + 1}` : nextName;
+          options.styleWords[ids[i]] = options.styleWords[next];
+          options.styleRegexByStyle[ids[i]] = options.styleRegexByStyle[next];
+        }
+        const last = ids[ids.length - 1];
+        options.styleNames[last] = `Style ${styleNumber(last)}`;
+        options.styleWords[last] = '';
+        options.styleRegexByStyle[last] = false;
+        options.styleCount--;
+        saveOptions();
+        syncStyleControls();
+        // Inputs hold the old text until they are refreshed (a focused one is skipped).
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         syncStyleControls();
       }
 
@@ -2870,7 +3186,10 @@
         const { tokens, plain } = tokenize(text);
         const keys = new Array(tokens.length);
         for (let i = 0; i < tokens.length; i++) keys[i] = keyOf(plain[i], foldCase, options.ignoreWhitespace);
-        const entry = { text, signature, tokens, keys };
+        const starts = new Array(tokens.length + 1);
+        starts[0] = 0;
+        for (let i = 0; i < tokens.length; i++) starts[i + 1] = starts[i] + tokens[i].length;
+        const entry = { text, signature, tokens, keys, starts };
         sideCache[slot] = entry;
         return entry;
       }
@@ -3003,8 +3322,9 @@
         // written in Original text, so the result reads like the revised document.
         const same = (j) => edits.push({ type: 'same', text: b[j] });
         const flush = (toA, toB) => {
-          while (curA < toA) edits.push({ type: 'del', text: a[curA++] });
-          while (curB < toB) edits.push({ type: 'add', text: b[curB++] });
+          // ai / bi: where the edit sits in each side's tokens, used to find it again in the boxes.
+          while (curA < toA) { edits.push({ type: 'del', text: a[curA], ai: curA, bi: curB }); curA++; }
+          while (curB < toB) { edits.push({ type: 'add', text: b[curB], ai: curA, bi: curB }); curB++; }
         };
 
         for (let j = 0; j < head; j++) same(j);
@@ -3026,14 +3346,15 @@
       /* ======================================================================
          Result rendering
          ====================================================================== */
-      function editsToHtml(edits) {
+      function editsToHtml(edits, A, B) {
         let html = '';
         let run = null; // consecutive add/del tokens merged into one <ins>/<del>
 
+        // data-a / data-b: the edit's character range in Original / Compared text (empty range = a position).
         const flushRun = () => {
           if (!run) return;
           const tag = run.type === 'add' ? 'ins' : 'del';
-          html += `<${tag}>${run.text}</${tag}>`;
+          html += `<${tag} data-a="${run.a0},${run.a1}" data-b="${run.b0},${run.b1}">${run.text}</${tag}>`;
           run = null;
         };
 
@@ -3042,11 +3363,20 @@
           if (edit.type === 'same') {
             flushRun();
             html += escaped;
-          } else if (run && run.type === edit.type) {
-            run.text += escaped;
           } else {
-            flushRun();
-            run = { type: edit.type, text: escaped };
+            const isDel = edit.type === 'del';
+            const a0 = A.starts[edit.ai];
+            const a1 = isDel ? A.starts[edit.ai + 1] : a0;
+            const b0 = B.starts[edit.bi];
+            const b1 = isDel ? b0 : B.starts[edit.bi + 1];
+            if (run && run.type === edit.type) {
+              run.text += escaped;
+              run.a1 = Math.max(run.a1, a1);
+              run.b1 = Math.max(run.b1, b1);
+            } else {
+              flushRun();
+              run = { type: edit.type, text: escaped, a0, a1, b0, b1 };
+            }
           }
         }
         flushRun();
@@ -3056,7 +3386,22 @@
       let renderFrame = 0;
 
       /** Coalesces bursts of changes (typing, button actions) into one render per frame. */
+      // On long documents, wait for a short pause in typing before redoing the comparison and the numbers.
+      const LARGE_TEXT_CHARS = 60000;
+      const LARGE_TEXT_DELAY_MS = 150;
+      const isLargeText = () => original.value.length + compared.value.length > LARGE_TEXT_CHARS;
+      let renderTimer = 0;
+
       function scheduleRender() {
+        if (renderFrame) return;
+        if (isLargeText()) {
+          clearTimeout(renderTimer);
+          renderTimer = setTimeout(() => { renderTimer = 0; scheduleRenderNow(); }, LARGE_TEXT_DELAY_MS);
+          return;
+        }
+        scheduleRenderNow();
+      }
+      function scheduleRenderNow() {
         if (renderFrame) return;
         renderFrame = requestAnimationFrame(() => {
           renderFrame = 0;
@@ -3069,6 +3414,9 @@
           cancelAnimationFrame(renderFrame);
           renderFrame = 0;
         }
+        clearTimeout(renderTimer);
+        renderTimer = 0;
+        clearDifferenceMarks(); // positions of the last difference shown are out of date after any change
         if (!original.value && !compared.value) {
           output.classList.add('empty');
           output.textContent = COMPARE_PLACEHOLDER;
@@ -3076,12 +3424,14 @@
           phraseHitCount = 0;
           updatePhraseButtons();
           refreshGutters(['result']);
+          updateDifferenceCount();
           return;
         }
 
-        const edits = diff(prepareSide('a', original.value), prepareSide('b', compared.value));
+        const sideA = prepareSide('a', original.value);
+        const sideB = prepareSide('b', compared.value);
         output.classList.remove('empty');
-        output.innerHTML = editsToHtml(edits);
+        output.innerHTML = editsToHtml(diff(sideA, sideB), sideA, sideB);
 
         applyPhrasesToResult();
         lastPlainResult = output.textContent; // preserve the tagged result for copying
@@ -3091,7 +3441,165 @@
         refreshGutters(['result']);
         markSelection();
         markEmptySpace();
+        updateDifferenceCount();
       }
+
+      /* ----- Next / previous difference -----
+         Walks the changed spots of the result in order. The current one is marked in the result and in Original
+         text (highlight API) and in Compared text (its shaded layer), and each box scrolls to it. Marks go away
+         on the next change, since the positions are out of date by then. */
+      let diffTarget = null; // { a: [start, end], b: [start, end] } in Original / Compared text
+      let diffKey = -1; // order key of the last difference visited, so Next continues from there
+
+      let diffRanges = []; // result and Original ranges of the difference being shown
+
+      function clearDifferenceMarks() {
+        diffTarget = null;
+        diffRanges = [];
+        if (highlightsSupported()) CSS.highlights.delete('diff-current');
+      }
+
+      /** Paints or removes the orange mark of the current difference, per the Hide / Show highlight switch. */
+      function paintDifference() {
+        if (highlightsSupported()) {
+          if (diffRanges.length && !options.hideDiffHighlight) CSS.highlights.set('diff-current', new Highlight(...diffRanges));
+          else CSS.highlights.delete('diff-current');
+        }
+        markMatchesInCompared();
+      }
+
+      /** Changed spots as groups: neighbouring <del>/<ins> pieces are one difference. Hidden tags do not count. */
+      function differenceGroups() {
+        const groups = [];
+        let last = null;
+        for (const el of output.querySelectorAll('ins, del')) {
+          if (!el.dataset.a || !el.textContent.replace(/\u2060/g, '')) continue;
+          const [a0, a1] = el.dataset.a.split(',').map(Number);
+          const [b0, b1] = el.dataset.b.split(',').map(Number);
+          if (last && last.lastEl.nextSibling === el) {
+            last.lastEl = el;
+            last.a = [Math.min(last.a[0], a0), Math.max(last.a[1], a1)];
+            last.b = [Math.min(last.b[0], b0), Math.max(last.b[1], b1)];
+          } else {
+            last = { firstEl: el, lastEl: el, a: [a0, a1], b: [b0, b1] };
+            groups.push(last);
+          }
+        }
+        for (const g of groups) g.key = g.a[0] + g.b[0];
+        return groups;
+      }
+
+      function updateDifferenceCount(position) {
+        const total = differenceGroups().length;
+        const hasResult = !output.classList.contains('empty');
+        prevDiffButton.disabled = nextDiffButton.disabled = !total;
+        diffCount.textContent = `${hasResult && position ? position : 0} / ${hasResult ? total : 0}`;
+      }
+
+      /** A zero-width spot gets the neighbouring character, so there is something to see. */
+      function visibleSpan([start, end], text) {
+        if (end > start) return [start, end];
+        if (end < text.length && text[end] !== '\n') return [start, end + 1];
+        return start > 0 && text[start - 1] !== '\n' ? [start - 1, start] : [start, end];
+      }
+
+      function originalRangeFor([start, end]) {
+        const segs = [];
+        richOriginalText(segs);
+        const [from, to] = visibleSpan([start, end], original.value);
+        const first = segs.findIndex((seg) => seg.start + seg.node.nodeValue.length > from);
+        let lastIndex = -1;
+        segs.forEach((seg, i) => { if (seg.start < to) lastIndex = i; });
+        if (first === -1 || lastIndex < first) return null;
+        const range = document.createRange();
+        range.setStart(segs[first].node, Math.max(0, from - segs[first].start));
+        range.setEnd(segs[lastIndex].node, Math.min(segs[lastIndex].node.nodeValue.length, to - segs[lastIndex].start));
+        return range;
+      }
+
+      /** Scrolls a box so the rectangle sits in its upper third, unless it is already comfortably in view. */
+      function scrollBoxTo(box, rect) {
+        if (!rect || (!rect.width && !rect.height)) return;
+        const frame = box.getBoundingClientRect();
+        if (rect.top < frame.top + 24 || rect.bottom > frame.bottom - 24) box.scrollTop += rect.top - frame.top - box.clientHeight / 3;
+        if (rect.left < frame.left + 24 || rect.right > frame.right - 24) box.scrollLeft += rect.left - frame.left - box.clientWidth / 3;
+      }
+
+      function showDifference(group, position) {
+        diffKey = group.key;
+        diffTarget = { a: group.a, b: group.b };
+        const ranges = [];
+        const resultRange = document.createRange();
+        resultRange.setStartBefore(group.firstEl);
+        resultRange.setEndAfter(group.lastEl);
+        ranges.push(resultRange);
+        const originalRange = originalRangeFor(group.a);
+        if (originalRange) ranges.push(originalRange);
+        diffRanges = ranges;
+        paintDifference();
+
+        scrollBoxTo(output, resultRange.getBoundingClientRect());
+        if (originalRange) scrollBoxTo(originalRich, originalRange.getBoundingClientRect());
+        const mark = matchLayer.querySelector('mark.diff');
+        if (mark) scrollBoxTo(compared, mark.getBoundingClientRect());
+        updateDifferenceCount(position);
+      }
+
+      function goToDifference(step) {
+        if (options.hideDiffHighlight) { options.hideDiffHighlight = false; saveOptions(); syncControls(); } // going to a difference shows its mark
+        const groups = differenceGroups();
+        if (!groups.length) { updateDifferenceCount(); return; }
+        let index;
+        if (step > 0) {
+          index = groups.findIndex((g) => g.key > diffKey);
+          if (index === -1) index = 0; // past the last one: wrap around
+        } else {
+          index = -1;
+          groups.forEach((g, i) => { if (g.key < diffKey) index = i; });
+          if (index === -1) index = groups.length - 1;
+        }
+        showDifference(groups[index], index + 1);
+      }
+      /** Clicking a red or green piece of the result marks only that piece: red shows its text in Original, green in Compared. */
+      output.addEventListener('click', (event) => {
+        const piece = event.target.closest && event.target.closest('ins[data-a], del[data-a]');
+        if (!piece || !output.contains(piece)) return;
+        const picked = window.getSelection();
+        if (picked && !picked.isCollapsed) return; // a drag-selection is not a click on a difference
+        if (!piece.textContent.replace(/\u2060/g, '')) return;
+        if (options.hideDiffHighlight) { options.hideDiffHighlight = false; saveOptions(); syncControls(); }
+
+        const isRemoved = piece.tagName === 'DEL';
+        const a = piece.dataset.a.split(',').map(Number);
+        const b = piece.dataset.b.split(',').map(Number);
+        diffKey = a[0] + b[0];
+        diffTarget = isRemoved ? { a, b: null } : { a: null, b };
+
+        const resultRange = document.createRange();
+        resultRange.selectNode(piece);
+        const ranges = [resultRange];
+        const originalRange = isRemoved ? originalRangeFor(a) : null;
+        if (originalRange) ranges.push(originalRange);
+        diffRanges = ranges;
+        paintDifference();
+
+        if (originalRange) scrollBoxTo(originalRich, originalRange.getBoundingClientRect());
+        const mark = matchLayer.querySelector('mark.diff');
+        if (!isRemoved && mark) scrollBoxTo(compared, mark.getBoundingClientRect());
+
+        const groups = differenceGroups();
+        const index = groups.findIndex((g) => {
+          for (let node = g.firstEl; node; node = node.nextSibling) {
+            if (node === piece) return true;
+            if (node === g.lastEl) break;
+          }
+          return false;
+        });
+        updateDifferenceCount(index >= 0 ? index + 1 : undefined);
+      });
+      toggleDiffButton.addEventListener('click', () => { options.hideDiffHighlight = !options.hideDiffHighlight; saveOptions(); syncControls(); paintDifference(); });
+      nextDiffButton.addEventListener('click', () => goToDifference(1));
+      prevDiffButton.addEventListener('click', () => goToDifference(-1));
 
       /* ----- Runs of two or more spaces, marked in the result in their own color ----- */
       function markEmptySpace() {
@@ -3281,6 +3789,13 @@
             }
           }
         }
+        if (diffTarget && diffTarget.b && !options.hideDiffHighlight && value.length <= 400000) {
+          const [start, end] = visibleSpan(diffTarget.b, value);
+          if (end > start) {
+            for (let i = marks.length - 1; i >= 0; i--) if (marks[i][0] < end && marks[i][1] > start) marks.splice(i, 1);
+            marks.push([start, end, 'diff']);
+          }
+        }
         if (!marks.length) {
           matchLayer.textContent = '';
           matchBackdrop.hidden = true;
@@ -3324,7 +3839,7 @@
             categories.push({ key: 'caps', regex: new RegExp(`(?<![\\p{L}\\p{N}_])(?:${capPatterns.join('|')})(?![\\p{L}\\p{N}_])`, 'giu') });
           } catch {}
         }
-        for (const id of STYLE_IDS) {
+        for (const id of visibleStyleIds()) {
           const raw = options.styleWords[id] || '';
           const targets = raw.split(/[\n,]+/).map((v) => v.trim()).filter(Boolean);
           if (!targets.length) continue;
@@ -3552,12 +4067,16 @@
         }
       }
 
+      let appliedWrap = null;
       function applyWrap() {
         [originalRich, compared, output].forEach((element) => element.classList.toggle('wrap', options.wrap));
         [compared].forEach((textarea) => textarea.setAttribute('wrap', options.wrap ? 'soft' : 'off'));
+        if (appliedWrap === options.wrap) return; // syncControls runs on every switch; only a real change needs new numbers
+        appliedWrap = options.wrap;
         refreshGutters(Object.keys(panes));
       }
 
+      const rowCache = { signature: '', map: new Map() };
       const SIMPLE_LINE_RE = /^[\x20-\x7e\u0400-\u04ff]*$/;
       let monoWidth = 0;
 
@@ -3631,7 +4150,7 @@
         pane.gutter.style.width = `calc(${digits}ch + 20px)`;
 
         let numbers;
-        if (!options.wrap) {
+        if (!options.wrap && key !== 'original') { // Original text always wraps, even with Wrap lines off
           numbers = lines.map((_, index) => index + 1).join('\n');
         } else {
           const style = getComputedStyle(pane.element);
@@ -3643,24 +4162,37 @@
           const cw = monoCharWidth() * zoom;
           const maxChars = cw > 0 ? Math.floor(contentWidth / (cw * 1.02)) : 0;
           const rows = new Array(lines.length).fill(1);
-          const measured = [];
-          const fragment = document.createDocumentFragment();
 
+          // Rows per line are remembered for the current width and text size, so after an edit only the
+          // changed lines go through the mirror again.
+          const signature = `${Math.round(contentWidth * 10)}|${zoom}`;
+          if (rowCache.signature !== signature || rowCache.map.size > 30000) { rowCache.signature = signature; rowCache.map = new Map(); }
+          const known = rowCache.map;
+          const pending = new Map(); // line text -> indexes of the lines with that text
           for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (line.length <= maxChars && SIMPLE_LINE_RE.test(line)) continue;
-            const row = document.createElement('div');
-            row.textContent = line === '' ? '\u200B' : line;
-            fragment.append(row);
-            measured.push(i);
+            const cached = known.get(line);
+            if (cached !== undefined) { rows[i] = cached; continue; }
+            const same = pending.get(line);
+            if (same) same.push(i); else pending.set(line, [i]);
           }
 
-          if (measured.length) {
+          if (pending.size) {
+            const fragment = document.createDocumentFragment();
+            for (const line of pending.keys()) {
+              const row = document.createElement('div');
+              row.textContent = line === '' ? '\u200B' : line;
+              fragment.append(row);
+            }
             mirror.textContent = '';
             mirror.append(fragment);
             const lineHeight = parseFloat(getComputedStyle(mirror).lineHeight) || 21.7;
-            for (let r = 0; r < measured.length; r++) {
-              rows[measured[r]] = Math.max(1, Math.round(mirror.children[r].getBoundingClientRect().height / lineHeight));
+            let r = 0;
+            for (const [line, indexes] of pending) {
+              const count = Math.max(1, Math.round(mirror.children[r++].getBoundingClientRect().height / lineHeight));
+              known.set(line, count);
+              for (const i of indexes) rows[i] = count;
             }
           }
 
@@ -3668,11 +4200,12 @@
           mirror.textContent = '';
         }
 
-        if (key === 'original') {
+        if (key === 'original' && originalRich.querySelector('img')) {
           // Rich-text images increase the visual height of their line. Render the
           // gutter as individual rows so later line numbers follow that height.
           const lineHeight = parseFloat(getComputedStyle(pane.element).lineHeight) || 21.7;
           pane.gutter.textContent = '';
+          pane.gutter.style.paddingTop = '';
           pane.gutter.style.lineHeight = `${lineHeight}px`;
 
           // Measure the real position of every logical line in the editor, so each number
@@ -3706,6 +4239,23 @@
             pane.gutter.appendChild(row);
           });
         } else {
+          // No pictures: every line is plain text, so the numbers can be one block of text (fast on long documents).
+          let top = '';
+          let lineHeight = '';
+          if (key === 'original') {
+            // The editor's text sits a little lower in its line than a plain gutter's: shift the numbers to match.
+            const px = parseFloat(getComputedStyle(pane.element).lineHeight) || 21.7;
+            mirror.style.width = 'auto';
+            mirror.textContent = 'x';
+            const probe = document.createRange();
+            probe.selectNodeContents(mirror.firstChild);
+            const glyphHeight = probe.getBoundingClientRect().height;
+            mirror.textContent = '';
+            lineHeight = `${px}px`;
+            top = glyphHeight ? `${16 + Math.max(0, (px - glyphHeight) / 2)}px` : '';
+          }
+          pane.gutter.style.lineHeight = lineHeight;
+          pane.gutter.style.paddingTop = top;
           pane.gutter.textContent = numbers;
         }
         pane.gutter.scrollTop = pane.element.scrollTop;
@@ -3782,8 +4332,18 @@
       const dirtyGutters = new Set();
       let gutterFrame = 0;
 
+      let gutterTimer = 0;
       function refreshGutters(keys) {
         keys.forEach((key) => dirtyGutters.add(key));
+        if (gutterFrame) return;
+        if (isLargeText()) { // long document: lay out after a pause, not on every keystroke
+          clearTimeout(gutterTimer);
+          gutterTimer = setTimeout(() => { gutterTimer = 0; layoutDirtyGutters(); }, LARGE_TEXT_DELAY_MS);
+          return;
+        }
+        layoutDirtyGutters();
+      }
+      function layoutDirtyGutters() {
         if (gutterFrame) return;
         gutterFrame = requestAnimationFrame(() => {
           gutterFrame = 0;
@@ -3895,25 +4455,36 @@
       /* ======================================================================
          Phrase import and export
          ====================================================================== */
+      /* Everything that can be moved to another machine: phrases, the capitalize list and all styles. */
+      const splitTargetList = (text) => String(text || '').split(/[\n,;]+/).map((item) => item.trim()).filter(Boolean);
+
       function exportPhrases() {
-        if (!phrases.length) {
+        const ids = visibleStyleIds();
+        const styles = {
+          count: options.styleCount,
+          names: Object.fromEntries(ids.map((id) => [id, options.styleNames[id]])),
+          words: Object.fromEntries(ids.map((id) => [id, options.styleWords[id] || ''])),
+          regex: Object.fromEntries(ids.map((id) => [id, Boolean(options.styleRegexByStyle[id])])),
+        };
+        const capitalize = splitTargetList(options.uppercaseTargets).length;
+        const styled = ids.filter((id) => (options.styleWords[id] || '').trim()).length;
+        if (!phrases.length && !capitalize && !styled) {
           phraseStatus.textContent = 'Nothing to export yet.';
           return;
         }
 
-        const payload = { app: 'text-compare', version: 2, styleNames: options.styleNames, phrases };
+        const payload = { app: 'text-compare', version: 3, phrases, uppercaseTargets: options.uppercaseTargets, styles };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'text-compare-phrases.json';
+        link.download = 'text-compare-settings.json';
         document.body.appendChild(link);
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-        const plural = phrases.length === 1 ? '' : 's';
-        phraseStatus.textContent = `Exported ${phrases.length} phrase${plural} to text-compare-phrases.json.`;
+        phraseStatus.textContent = `Exported ${phrases.length} phrase${phrases.length === 1 ? '' : 's'}, ${capitalize} capitalize entr${capitalize === 1 ? 'y' : 'ies'} and ${options.styleCount} style${options.styleCount === 1 ? '' : 's'} to text-compare-settings.json.`;
       }
 
       function importPhrases(file) {
@@ -3927,16 +4498,32 @@
             const list = Array.isArray(data) ? data : data && Array.isArray(data.phrases) ? data.phrases : null;
             if (!list) throw new Error('no phrase list found');
 
-            if (data && data.styleNames && typeof data.styleNames === 'object') {
-              for (const id of STYLE_IDS) {
-                const name = data.styleNames[id];
-                if (typeof name === 'string' && name.trim()) {
-                  options.styleNames[id] = name.trim().slice(0, MAX_STYLE_NAME_LENGTH);
-                }
-              }
-              saveOptions();
-              syncStyleControls();
+            // Styles: the imported count, names, targets and regex flags replace the current ones.
+            const styles = data && data.styles && typeof data.styles === 'object' ? data.styles : null;
+            if (styles && Number.isInteger(styles.count) && styles.count >= 1 && styles.count <= MAX_STYLES) options.styleCount = styles.count;
+            for (const id of STYLE_IDS) {
+              const name = (styles && styles.names && styles.names[id]) ?? (data && data.styleNames && data.styleNames[id]);
+              if (typeof name === 'string' && name.trim()) options.styleNames[id] = name.trim().slice(0, MAX_STYLE_NAME_LENGTH);
+              if (styles && styles.words && typeof styles.words[id] === 'string') options.styleWords[id] = styles.words[id];
+              if (styles && styles.regex && typeof styles.regex[id] === 'boolean') options.styleRegexByStyle[id] = styles.regex[id];
             }
+
+            // Capitalize list: entries that are not in the current list are added.
+            let capitalizeAdded = 0;
+            if (data && typeof data.uppercaseTargets === 'string') {
+              const current = splitTargetList(options.uppercaseTargets);
+              const known = new Set(current.map((item) => item.toLocaleLowerCase()));
+              for (const item of splitTargetList(data.uppercaseTargets)) {
+                if (known.has(item.toLocaleLowerCase())) continue;
+                known.add(item.toLocaleLowerCase());
+                current.push(item);
+                capitalizeAdded++;
+              }
+              options.uppercaseTargets = current.join(', ');
+              uppercaseTargetsInput.value = options.uppercaseTargets;
+            }
+            saveOptions();
+            syncStyleControls();
 
             let added = 0;
             let updated = 0;
@@ -3957,7 +4544,7 @@
             savePhrases();
             renderPhrases();
             renderDiff();
-            phraseStatus.textContent = `Imported: ${added} new, ${updated} updated.`;
+            phraseStatus.textContent = `Imported: ${added} new and ${updated} updated phrases, ${capitalizeAdded} new capitalize entries${styles ? `, ${options.styleCount} styles` : ''}.`;
           } catch (error) {
             phraseStatus.textContent = `Import failed: ${error.message}.`;
           }
@@ -4135,14 +4722,33 @@
         return result + text.slice(last);
       }
 
+      // Empty rows (and rows with only spaces) are removed, at the start and end of the text too.
+      const removeEmptyRows = (text) => text.split('\n').filter((line) => line.trim() !== '').join('\n');
+
       $('#fixComparedGrammar').addEventListener('click', () => {
-        replaceTextBox(compared, normalizeCommaGrammar(compared.value), $('#fixComparedGrammar'));
+        replaceTextBox(compared, removeEmptyRows(normalizeCommaGrammar(compared.value)), $('#fixComparedGrammar'));
       });
+
+      // Puts the text on one line, so rows broken in the middle of a sentence do not matter. Empty rows go.
+      // A row that starts with a bullet stays a row of its own.
+      const BULLET_ROW_RE = /^[•·▪●◦*\-–—]\s/;
+      function joinRows(text) {
+        let joined = '';
+        for (const raw of text.split(/\r?\n/)) {
+          const line = raw.trim();
+          if (!line) continue;
+          if (!joined) joined = line;
+          else if (BULLET_ROW_RE.test(line)) joined += `\n${line}`;
+          else joined += joined.endsWith('\n') ? line : ` ${line}`;
+        }
+        return joined;
+      }
 
       // Split the Compared text into rows after all selected punctuation marks.
       // Numbered sequences such as ", 3,. 2,. 1,." are kept together.
       function splitComparedRows() {
-        const source = compared.value;
+        const before = compared.value;
+        const source = joinRows(before);
         const length = source.length;
         const marks = new Set(['.', '?', '!', ';']);
         const guarded = new Uint8Array(length);
@@ -4155,7 +4761,11 @@
           const ch = source[i];
           out.push(ch);
           if (!marks.has(ch) || guarded[i]) continue;
-          if (ch === '.' && ((/\d/.test(source[i - 1] || '') && /\d/.test(source[i + 1] || '')) || source[i + 1] === '.')) continue;
+          if (ch === '.') {
+            if (source[i + 1] === '.' || source[i + 1] === ',') continue; // "..." and ".," do not end a sentence
+            if (/\d/.test(source[i - 1] || '') && /\d/.test(source[i + 1] || '')) continue; // 3.5
+            if (/(?:^|[^\p{L}\p{N}])\d+$/u.test(source.slice(Math.max(0, i - 12), i))) continue; // ordinal: 2. 3. 4.
+          }
           let j = i + 1;
           while (j < length && (source[j] === ' ' || source[j] === '\t')) j++;
           if (j >= length || source[j] === '\n') continue;
@@ -4164,7 +4774,7 @@
           i = j - 1;
         }
         const result = out.join('');
-        if (result !== source) replaceTextBox(compared, result, $('#splitSentencesBtn'));
+        if (result !== before) replaceTextBox(compared, result, $('#splitSentencesBtn'));
         else showButtonMessage($('#splitSentencesBtn'), 'No changes');
       }
       $('#splitSentencesBtn').addEventListener('click', splitComparedRows);
@@ -4221,8 +4831,10 @@
         return chosen.length;
       }
 
-      document.querySelectorAll('.apply-auto-style').forEach((button) => {
-        button.addEventListener('click', () => {
+      $('#styleButtons').addEventListener('click', (event) => {
+        const button = event.target.closest('.apply-auto-style');
+        if (!button) return;
+        {
           saveAutoStyleSettings();
 
           const id = button.dataset.style;
@@ -4249,7 +4861,7 @@
             ? `Applied _style_${markerName}_[] to ${changed} occurrence${changed === 1 ? '' : 's'} in Compared text.`
             : 'No new matches found in Compared text (or all matches were already tagged).';
           scheduleRender();
-        });
+        }
       });
 
       $('#clearStyleTags').addEventListener('click', () => {
@@ -4394,12 +5006,19 @@
 
       function transformComparedCase(caseMode) {
         const source = compared.value;
-        const { visible, positions, protectedIndexes } = scanVisibleText(source);
-        const converted = convertCase(visible, caseMode);
+        const from = compared.selectionStart;
+        const to = compared.selectionEnd;
+        const hasSelection = to > from; // with a selection only that part changes, otherwise the whole text
+        const { visible, positions } = scanVisibleText(source);
 
-        // Rebuild the original string, swapping in converted characters at visible positions only.
+        const chosen = [];
+        for (let i = 0; i < positions.length; i++) {
+          if (!hasSelection || (positions[i] >= from && positions[i] < to)) chosen.push(i);
+        }
+        const converted = convertCase(chosen.map((i) => visible[i]), caseMode);
+
         const pieces = source.split('');
-        for (let i = 0; i < positions.length; i++) pieces[positions[i]] = converted[i];
+        chosen.forEach((i, k) => { pieces[positions[i]] = converted[k]; });
         const result = pieces.join('');
 
         const button = caseButtons[caseMode];
@@ -4408,6 +5027,10 @@
           return;
         }
         setComparedValue(result);
+        if (hasSelection) {
+          compared.focus({ preventScroll: true });
+          compared.setSelectionRange(from, Math.min(to, compared.value.length));
+        }
         showButtonMessage(button, 'Done');
       }
 
@@ -4569,6 +5192,7 @@
         original.value = workspace.original;
         setRichOriginalHtml(workspace.originalHtml || (workspace.original ? `<div>${escapeRichText(workspace.original)}</div>` : ''));
         startHistory();
+        originalGutterMinRows = Math.max(1, (original.value || '').split('\n').length);
         compared.value = workspace.compared;
 
         setComparedExpanded(false);
@@ -4857,6 +5481,11 @@
         style3: '#applyStyle3',
         style4: '#applyStyle4',
         style5: '#applyStyle5',
+        style6: '#applyStyle6',
+        style7: '#applyStyle7',
+        style8: '#applyStyle8',
+        style9: '#applyStyle9',
+        style10: '#applyStyle10',
         fixSpaces: '#fixComparedSpaces',
         fixGrammar: '#fixComparedGrammar',
         splitRows: '#splitSentencesBtn',
@@ -4868,7 +5497,8 @@
       for (const [id, selector] of Object.entries(BUTTON_HOTKEYS)) {
         hotkeyActions[id] = (event) => {
           event.preventDefault();
-          $(selector).click();
+          const target = $(selector);
+          if (target) target.click();
         };
       }
 
@@ -4922,7 +5552,6 @@
 
       $('#hotkeysOpen').addEventListener('click', openHotkeyPanel);
       $('#hotkeysClose').addEventListener('click', closeHotkeyPanel);
-      $('#hotkeysDone').addEventListener('click', closeHotkeyPanel);
       $('#hotkeysReset').addEventListener('click', () => {
         hotkeys = { ...DEFAULT_HOTKEYS };
         recordingHotkeyId = null;
@@ -5525,7 +6154,14 @@
       }
       highlightButton.addEventListener('click', toggleOption('highlight'));
       hideTagsButton.addEventListener('click', toggleOption('hideTags'));
-      markSpaceButton.addEventListener('click', toggleOption('markEmptySpace'));
+      // Only hidden image tags change how the result is built; otherwise the marks alone are redrawn.
+      markSpaceButton.addEventListener('click', () => {
+        options.markEmptySpace = !options.markEmptySpace;
+        saveOptions();
+        syncControls();
+        if (options.hideTags && /image\[_image_\d+_\]/.test(compared.value + original.value)) renderDiff();
+        else { markEmptySpace(); markMatchesInCompared(); }
+      });
       markMatchesButton.addEventListener('click', () => { toggleOption('markAllMatches')(); markMatchesInCompared(); });
 
       $('#reset').addEventListener('click', () => {
@@ -5540,6 +6176,7 @@
         Object.keys(boxZoom).forEach(applyBoxZoom);
         original.value = '';
         compared.value = '';
+        originalGutterMinRows = 1; // forget the rows added with Enter, so the line numbers restart at 1
         captureActiveWorkspace();
         renderDiff();
         refreshGutters(['original', 'compared']);
@@ -5547,7 +6184,7 @@
       });
 
       // A mouse wheel over a button row that overflows scrolls it sideways, like a touchpad swipe would.
-      const BUTTON_ROWS = '.button-scroll, .box-actions, .compared-toolbar-bottom, .result-actions, .compared-head, .original-editor .field-head';
+      const BUTTON_ROWS = '.button-scroll, .box-actions, .compared-toolbar-bottom, .result-scroll, .result-actions, .compared-head, .original-editor .field-head';
       document.addEventListener('wheel', (event) => {
         if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
         const row = event.target.closest && event.target.closest(BUTTON_ROWS);
@@ -5569,6 +6206,34 @@
         return copied;
       }
 
+      // Saves the page as one .html file. The original source is fetched, so the copy has none of your texts or settings in it.
+      $('#downloadPage').addEventListener('click', async () => {
+        const button = $('#downloadPage');
+        const flash = (cls, title) => {
+          const was = button.title;
+          button.classList.add(cls);
+          button.title = title;
+          setTimeout(() => { button.classList.remove(cls); button.title = was; }, 1800);
+        };
+        if (location.protocol === 'file:') { flash('on', 'This page is already a file on your computer'); return; }
+        try {
+          const response = await fetch(location.href.split('#')[0], { cache: 'no-store' });
+          if (!response.ok) throw new Error(String(response.status));
+          const blob = new Blob([await response.text()], { type: 'text/html' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'text-match.html';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          flash('on', 'Downloaded text-match.html');
+        } catch {
+          flash('danger', 'Download failed');
+        }
+      });
+
       copyButton.addEventListener('click', async () => {
         if (renderFrame) renderDiff(); // make sure the copied text is current
         let copied = true;
@@ -5582,6 +6247,7 @@
 
       // Phrases panel
       phrasesButton.addEventListener('click', () => setPhrasePanelOpen(phrasePanel.hidden));
+      $('#phClose').addEventListener('click', () => setPhrasePanelOpen(false));
       $('#phAdd').addEventListener('click', addPhrase);
       [phraseFind, phraseReplace].forEach((input) => {
         input.addEventListener('keydown', (event) => {
@@ -5647,18 +6313,17 @@
         autoStyleStatus.textContent = 'Style names and targets saved.';
       });
 
-      for (const id of STYLE_IDS) {
-        const n = styleNumber(id);
-        const nameInput = $(`#styleName${n}`);
-        const wordsInput = $(`#styleWords${n}`);
-
-        nameInput.addEventListener('input', () => {
-          $(`#applyStyle${n}`).textContent = `Apply ${nameInput.value.trim() || `Style ${n}`}`;
-          saveAutoStyleSettings();
-        });
-        wordsInput.addEventListener('input', saveAutoStyleSettings);
-        $(`#styleRegex${n}`).addEventListener('change', saveAutoStyleSettings);
-      }
+      $('#autoStyleList').addEventListener('input', (event) => {
+        if (event.target.matches('input')) saveAutoStyleSettings();
+      });
+      $('#autoStyleList').addEventListener('change', (event) => {
+        if (event.target.matches('input[type="checkbox"]')) saveAutoStyleSettings();
+      });
+      $('#autoStyleList').addEventListener('click', (event) => {
+        const button = event.target.closest('.style-remove');
+        if (button) removeStyle(button.dataset.style);
+      });
+      $('#addStyleBtn').addEventListener('click', addStyle);
 
       document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
