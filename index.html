@@ -1642,6 +1642,10 @@
     /* Red and green pieces of the result can be clicked to mark them in Original / Compared text */
     #output ins, #output del { cursor: pointer; }
 
+    /* An added or removed space has no letters to color, so it gets a tinted block and a visible width */
+    ins.ws-diff { background: color-mix(in srgb, var(--new) 38%, transparent); border-radius: 2px; }
+    del.ws-diff { background: color-mix(in srgb, var(--red) 38%, transparent); border-radius: 2px; }
+
     /* Result toolbar: the buttons on the left scroll, "< 1 / 3 >" and Copy result as text stay pinned to the right edge */
     .result-actions {
       overflow: visible;
@@ -1701,6 +1705,8 @@
 
     /* A little air between each toolbar and the box under it */
     .pane { margin-top: 6px; }
+
+    #hideStylesBtn { min-width: 84px; }
   </style>
 </head>
 
@@ -1935,6 +1941,7 @@
                     <button id="fixComparedSpaces" class="action" type="button" title="Collapse runs of two or more spaces into one in Compared text">Fix spaces</button>
                     <button id="fixComparedGrammar" class="action" type="button" title="Fix punctuation spacing, including adding a space after . ! ? when needed">Fix Grammar</button>
                     <button id="splitSentencesBtn" class="action" type="button" title="Put the text on one line, then start a new row after ., ?, ! and ; (not after numbers such as 2. or after .,)">New row on each sentence</button>
+                    <button id="hideStylesBtn" class="action" type="button" aria-pressed="false" title="Hide the style tags in Compared text while you edit. The tags are kept and come back when you show them again.">Hide styles</button>
                   </div>
                   <button id="expandCompared" class="action expand-button" type="button" aria-pressed="false">Expand editor</button>
                 </div>
@@ -1968,7 +1975,7 @@
             </span>
             <div class="result-actions">
               <div class="result-scroll">
-              <button id="phrasesBtn" class="action" type="button" aria-expanded="false">Define Phrases</button>
+              <button id="phrasesBtn" class="action" type="button" aria-expanded="false">Define Capital</button>
               <button id="autoStylesBtn" class="action" type="button" aria-expanded="false">Define Styles</button>
               <button id="hlBtn" class="action" type="button" aria-pressed="false" title="Highlight configured capitalization words and style targets">Highlight Phrases</button>
               <button id="markSpaceBtn" class="action" type="button" aria-pressed="false" title="Mark runs of two or more spaces in the result">Mark empty space</button>
@@ -1988,7 +1995,7 @@
               <div class="pp-head"><button id="phClose" class="close-x" type="button" title="Close" aria-label="Close">✕</button></div>
               <!-- Hidden for now: remove the hidden attribute below to bring back the title, the note and the Add row. -->
               <div id="phraseDefineSection" hidden>
-                <p class="pp-title">Define Phrases</p>
+                <p class="pp-title">Define Capital</p>
                 <p class="pp-note">Stored in this browser. "Apply phrases" swaps them in the comparison result only; your two input texts never change. Matching follows the Case sensitive switch. The number in brackets on the buttons is how many matches were found in the result. Use Export and Import to move your phrases to another browser or share them with someone.</p>
                 <div class="pp-row">
                 <input id="phFind" type="text" placeholder="Word or phrase to find" spellcheck="false">
@@ -2022,7 +2029,7 @@
 
             <div id="autoStylePanel" class="auto-style-panel" hidden>
               <div class="pp-head"><p class="pp-title">Define Styles</p><button id="closeAutoStyles" class="close-x" type="button" title="Close" aria-label="Close">✕</button></div>
-              <p class="pp-note">Set a style name and one or more words or phrases. Separate targets with commas or new lines. Each Apply button adds tags only in Compared text. Matching is case-insensitive. For a style named cat, a match becomes _style_cat_[cat]. Original text is never modified. These rules are separate from Define Phrases.</p>
+              <p class="pp-note">Set a style name and one or more words or phrases. Separate targets with commas or new lines. Each Apply button adds tags only in Compared text. Matching is case-insensitive. For a style named cat, a match becomes _style_cat_[cat]. Original text is never modified. These rules are separate from Define Capital.</p>
               <div id="autoStyleList" class="auto-style-list"></div>
               <div class="pp-actions">
                 <button id="addStyleBtn" class="action" type="button" title="Add another style">Add style</button>
@@ -2566,6 +2573,7 @@
       let phrases = []; // [{ find, repl, style }]
       let phraseHitCount = 0;
       let lastPlainResult = '';
+      let stylesHidden = false; // Compared text is being edited without its style tags
       let workspaces = [];
       let activeWorkspaceId = '';
       let hotkeys = { ...DEFAULT_HOTKEYS };
@@ -2918,14 +2926,12 @@
           [highlightButton, options.highlight],
           [hideTagsButton, options.hideTags],
           [markSpaceButton, options.markEmptySpace],
-          [toggleDiffButton, options.hideDiffHighlight],
           [markMatchesButton, options.markAllMatches],
           [wrapButton, options.wrap],
         ].forEach(([button, on]) => {
           button.classList.toggle('on', on);
           button.setAttribute('aria-pressed', String(on));
         });
-        toggleDiffButton.textContent = options.hideDiffHighlight ? 'Show highlight' : 'Hide highlight';
         applyWrap();
         syncStyleControls();
         renderTheme();
@@ -3179,13 +3185,14 @@
 
       function prepareSide(slot, text) {
         const foldCase = !caseSensitive.checked;
-        const signature = `${compareMode}|${options.ignoreWhitespace}|${foldCase}`;
+        const signature = `${compareMode}|${options.ignoreWhitespace}|${foldCase}|${options.hideTags}`;
         const cached = sideCache[slot];
         if (cached && cached.text === text && cached.signature === signature) return cached;
 
         const { tokens, plain } = tokenize(text);
         const keys = new Array(tokens.length);
-        for (let i = 0; i < tokens.length; i++) keys[i] = keyOf(plain[i], foldCase, options.ignoreWhitespace);
+        // Tags visible: a style tag is part of the text, so adding or removing one is a difference. Tags hidden: only the words count.
+        for (let i = 0; i < tokens.length; i++) keys[i] = keyOf(options.hideTags ? plain[i] : tokens[i], foldCase, options.ignoreWhitespace);
         const starts = new Array(tokens.length + 1);
         starts[0] = 0;
         for (let i = 0; i < tokens.length; i++) starts[i + 1] = starts[i] + tokens[i].length;
@@ -3435,7 +3442,9 @@
 
         applyPhrasesToResult();
         lastPlainResult = output.textContent; // preserve the tagged result for copying
+        splitStyleOnlyDifferences();
         hideTagMarkers();
+        shadeWhitespaceDifferences();
         applyCategoryHighlights();
         updatePhraseButtons();
         refreshGutters(['result']);
@@ -3457,6 +3466,15 @@
         diffTarget = null;
         diffRanges = [];
         if (highlightsSupported()) CSS.highlights.delete('diff-current');
+        syncHighlightButton();
+      }
+
+      /** The button is lit only while an orange mark is really on screen. */
+      function syncHighlightButton() {
+        const showing = diffRanges.length > 0 && !options.hideDiffHighlight;
+        toggleDiffButton.classList.toggle('on', showing);
+        toggleDiffButton.setAttribute('aria-pressed', String(showing));
+        toggleDiffButton.textContent = options.hideDiffHighlight ? 'Show highlight' : 'Hide highlight';
       }
 
       /** Paints or removes the orange mark of the current difference, per the Hide / Show highlight switch. */
@@ -3466,6 +3484,7 @@
           else CSS.highlights.delete('diff-current');
         }
         markMatchesInCompared();
+        syncHighlightButton();
       }
 
       /** Changed spots as groups: neighbouring <del>/<ins> pieces are one difference. Hidden tags do not count. */
@@ -3476,12 +3495,12 @@
           if (!el.dataset.a || !el.textContent.replace(/\u2060/g, '')) continue;
           const [a0, a1] = el.dataset.a.split(',').map(Number);
           const [b0, b1] = el.dataset.b.split(',').map(Number);
-          if (last && last.lastEl.nextSibling === el) {
+          if (last && (last.lastEl.nextSibling === el || (el.dataset.g && el.dataset.g === last.g))) {
             last.lastEl = el;
             last.a = [Math.min(last.a[0], a0), Math.max(last.a[1], a1)];
             last.b = [Math.min(last.b[0], b0), Math.max(last.b[1], b1)];
           } else {
-            last = { firstEl: el, lastEl: el, a: [a0, a1], b: [b0, b1] };
+            last = { firstEl: el, lastEl: el, a: [a0, a1], b: [b0, b1], g: el.dataset.g };
             groups.push(last);
           }
         }
@@ -3597,7 +3616,7 @@
         });
         updateDifferenceCount(index >= 0 ? index + 1 : undefined);
       });
-      toggleDiffButton.addEventListener('click', () => { options.hideDiffHighlight = !options.hideDiffHighlight; saveOptions(); syncControls(); paintDifference(); });
+      toggleDiffButton.addEventListener('click', () => { options.hideDiffHighlight = !options.hideDiffHighlight; saveOptions(); paintDifference(); });
       nextDiffButton.addEventListener('click', () => goToDifference(1));
       prevDiffButton.addEventListener('click', () => goToDifference(-1));
 
@@ -3745,6 +3764,152 @@
         }
       }
 
+      /* ----- Hide styles (editing view of Compared text) -----
+         While on, every style tag in the Compared box is swapped for one invisible character, so the words read
+         cleanly and are easy to edit. The rest of the page still sees the full text: the box's value and
+         selection are translated on the way in and out, so comparing, copying, saving and the buttons all work
+         on the real text with its tags. Turning it off puts the tags back exactly where they were. */
+      const nativeValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+      const nativeStart = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'selectionStart');
+      const nativeEnd = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'selectionEnd');
+      const nativeSetSelection = HTMLTextAreaElement.prototype.setSelectionRange;
+      const STYLE_CLOSER_CHAR = '⁤';
+      const STYLE_OPENER_POOL = ['​', '‌', '⁠', '⁡', '⁢', '⁣', '﻿', '᠎', '⁪', '⁫', '⁬', '⁭', '⁮'];
+      let hiddenPool = [];   // invisible characters free to use in the current text
+      let hiddenTags = [];   // the opening tag each one stands for
+      const stylesHideButton = $('#hideStylesBtn');
+      const shownComparedText = () => nativeValue.get.call(compared);
+      const hiddenTagOf = (ch) => {
+        if (ch === STYLE_CLOSER_CHAR) return ']';
+        const i = hiddenPool.indexOf(ch);
+        return i < 0 ? null : (i < hiddenTags.length ? hiddenTags[i] : '');
+      };
+
+      /** Full tags in, invisible characters out. Already hidden tags are kept; stray or broken ones are dropped. */
+      function hideStyleTags(text) {
+        const pool = hiddenPool.length ? `[${hiddenPool.join('')}]|` : '';
+        const re = new RegExp(`${pool}${STYLE_CLOSER_CHAR}|_style_[A-Za-z0-9_-]+_\\[|_\\*style_[^\\[]*\\[|\\]`, 'g');
+        const parts = [];
+        let last = 0;
+        let open = false;
+        let openAt = -1; // index in parts of the opener that is still waiting for its closer
+        for (const m of text.matchAll(re)) {
+          parts.push(text.slice(last, m.index));
+          last = m.index + m[0].length;
+          const token = m[0];
+          if (token === ']' || token === STYLE_CLOSER_CHAR) {
+            if (open) { parts.push(token === ']' ? STYLE_CLOSER_CHAR : token); open = false; }
+            else parts.push(token === ']' ? token : ''); // a plain ] stays, a stray hidden closer goes
+            continue;
+          }
+          let ch = token;
+          if (token.length > 1) { // a full opening tag
+            let i = hiddenTags.indexOf(token);
+            if (i < 0 && hiddenTags.length < hiddenPool.length) { hiddenTags.push(token); i = hiddenTags.length - 1; }
+            ch = i < 0 ? token : hiddenPool[i];
+          } else if (hiddenPool.indexOf(token) >= hiddenTags.length) {
+            continue; // a hidden opener this session never made
+          }
+          if (open && openAt >= 0) parts[openAt] = ''; // the previous opener never got a closer
+          parts.push(ch);
+          openAt = parts.length - 1;
+          open = true;
+        }
+        parts.push(text.slice(last));
+        return parts.join('');
+      }
+
+      /** Invisible characters in, full tags out. */
+      function showStyleTags(text) {
+        if (!hiddenPool.length) return text;
+        const re = new RegExp(`[${hiddenPool.join('')}${STYLE_CLOSER_CHAR}]`, 'g');
+        return text.replace(re, (ch) => hiddenTagOf(ch) ?? '');
+      }
+
+      /** Position in the hidden-tags text -> position in the full text, and back. */
+      function fullOffset(shown, at) {
+        let offset = at;
+        for (let i = 0; i < at; i++) {
+          const tag = hiddenTagOf(shown[i]);
+          if (tag !== null) offset += tag.length - 1;
+        }
+        return offset;
+      }
+
+      function shownOffset(shown, full) {
+        let offset = 0;
+        let i = 0;
+        while (i < shown.length && offset < full) {
+          const tag = hiddenTagOf(shown[i]);
+          offset += tag === null ? 1 : tag.length;
+          i++;
+        }
+        return i;
+      }
+
+      // From here on the rest of the page reads and writes the full text, whatever the box shows.
+      Object.defineProperty(compared, 'value', {
+        configurable: true,
+        get() { const v = nativeValue.get.call(this); return stylesHidden ? showStyleTags(v) : v; },
+        set(next) { nativeValue.set.call(this, stylesHidden ? hideStyleTags(String(next)) : next); },
+      });
+      Object.defineProperty(compared, 'selectionStart', {
+        configurable: true,
+        get() { const at = nativeStart.get.call(this); return stylesHidden ? fullOffset(nativeValue.get.call(this), at) : at; },
+        set(at) { nativeStart.set.call(this, stylesHidden ? shownOffset(nativeValue.get.call(this), at) : at); },
+      });
+      Object.defineProperty(compared, 'selectionEnd', {
+        configurable: true,
+        get() { const at = nativeEnd.get.call(this); return stylesHidden ? fullOffset(nativeValue.get.call(this), at) : at; },
+        set(at) { nativeEnd.set.call(this, stylesHidden ? shownOffset(nativeValue.get.call(this), at) : at); },
+      });
+      compared.setSelectionRange = function (from, to, direction) {
+        if (!stylesHidden) return nativeSetSelection.call(this, from, to, direction);
+        const shown = nativeValue.get.call(this);
+        return nativeSetSelection.call(this, shownOffset(shown, from), shownOffset(shown, to), direction);
+      };
+
+      // Text typed or pasted with full tags while they are hidden is converted straight away.
+      compared.addEventListener('input', () => {
+        if (!stylesHidden) return;
+        const shown = nativeValue.get.call(compared);
+        const fixed = hideStyleTags(shown);
+        if (fixed === shown) return;
+        const caret = nativeStart.get.call(compared);
+        nativeValue.set.call(compared, fixed);
+        const at = hideStyleTags(shown.slice(0, caret)).length;
+        nativeSetSelection.call(compared, at, at);
+      }, true);
+
+      function setStylesHidden(on) {
+        if (on === stylesHidden) return;
+        const text = compared.value;
+        const start = compared.selectionStart;
+        const end = compared.selectionEnd;
+        if (on) {
+          if (text.includes(STYLE_CLOSER_CHAR)) {
+            autoStyleStatus.textContent = 'Hide styles is unavailable: the text contains a character it needs.';
+            return;
+          }
+          hiddenPool = STYLE_OPENER_POOL.filter((ch) => !text.includes(ch));
+          hiddenTags = [];
+          stylesHidden = true;
+          nativeValue.set.call(compared, hideStyleTags(text));
+        } else {
+          stylesHidden = false;
+          nativeValue.set.call(compared, text);
+          hiddenPool = [];
+          hiddenTags = [];
+        }
+        compared.setSelectionRange(start, end);
+        stylesHideButton.classList.toggle('on', stylesHidden);
+        stylesHideButton.setAttribute('aria-pressed', String(stylesHidden));
+        stylesHideButton.textContent = stylesHidden ? 'Show styles' : 'Hide styles';
+        markMatchesInCompared();
+        refreshGutters(['compared']);
+      }
+      stylesHideButton.addEventListener('click', () => { setStylesHidden(!stylesHidden); compared.focus({ preventScroll: true }); });
+
       /* ----- Marks inside the Compared box -----
          A textarea cannot style part of its text, so a transparent copy of the text sits behind it with the
          matches shaded, and follows its scrolling. With "Mark all matches" on, every occurrence of the selected text
@@ -3770,7 +3935,7 @@
       }
 
       function markMatchesInCompared(selection = readSelection()) {
-        const value = compared.value;
+        const value = stylesHidden ? shownComparedText() : compared.value;
         const marks = []; // [start, end, kind]
         if (value.length <= 400000) {
           if (options.markEmptySpace) {
@@ -3790,7 +3955,8 @@
           }
         }
         if (diffTarget && diffTarget.b && !options.hideDiffHighlight && value.length <= 400000) {
-          const [start, end] = visibleSpan(diffTarget.b, value);
+          let [start, end] = stylesHidden ? visibleSpan(diffTarget.b, compared.value) : visibleSpan(diffTarget.b, value);
+          if (stylesHidden) { start = shownOffset(value, start); end = shownOffset(value, end); }
           if (end > start) {
             for (let i = marks.length - 1; i >= 0; i--) if (marks[i][0] < end && marks[i][1] > start) marks.splice(i, 1);
             marks.push([start, end, 'diff']);
@@ -3894,7 +4060,7 @@
         const active = options.apply || options.highlight;
         const hits = active && phrases.length ? ` (${phraseHitCount})` : '';
         highlightButton.textContent = `Highlight Phrases${options.highlight ? hits : ''}`;
-        phrasesButton.textContent = `Define Phrases (${phrases.length})`;
+        phrasesButton.textContent = 'Define Capital';
       }
 
       /** Finds saved phrases in the rendered result and highlights (and optionally replaces) them. */
@@ -3969,6 +4135,93 @@
         });
       }
 
+      /**
+       * Tags visible: when a word is right and only its style tag differs, only the tag is marked red or green.
+       * The word between "_style_x_[" and "]" stays plain, and the tag pieces count as one difference.
+       */
+      function splitStyleOnlyDifferences() {
+        if (options.hideTags) return;
+        // A "]" is a style closer only when a style opened earlier, so the markers are found in the whole text first.
+        // A fragment such as "example]" (the end of a multi-word style) then still knows its "]" is a tag.
+        const allMarkers = (text) => {
+          const list = [];
+          let open = false;
+          for (const m of text.matchAll(STYLE_MARKER_RE)) {
+            const closer = m[0] === ']';
+            if (closer && !open) continue;
+            list.push({ raw: m.index, text: m[0] });
+            open = !closer;
+          }
+          return list;
+        };
+        const markersA = allMarkers(original.value);
+        const markersB = allMarkers(compared.value);
+        const parse = (fragment, start, list) => {
+          let plain = '';
+          let last = 0;
+          const markers = []; // { at: offset in plain, raw: offset in fragment, text }
+          for (const m of list) {
+            if (m.raw < start || m.raw + m.text.length > start + fragment.length) continue;
+            const raw = m.raw - start;
+            plain += fragment.slice(last, raw);
+            markers.push({ at: plain.length, raw, text: m.text });
+            last = raw + m.text.length;
+          }
+          plain += fragment.slice(last);
+          return { plain, markers };
+        };
+        const fold = (text) => (caseSensitive.checked ? text : text.toLocaleLowerCase());
+        const range = (from, length) => `${from},${from + length}`;
+        let group = 0;
+
+        for (const del of [...output.querySelectorAll('del[data-a]')]) {
+          const ins = del.nextSibling;
+          if (!del.isConnected || !ins || ins.nodeType !== 1 || ins.tagName !== 'INS' || !ins.dataset.a) continue;
+          const [a0, a1] = del.dataset.a.split(',').map(Number);
+          const [b0, b1] = ins.dataset.b.split(',').map(Number);
+          const delText = del.textContent;
+          const insText = ins.textContent;
+          if (delText.length !== a1 - a0 || insText.length !== b1 - b0) continue; // text was changed by phrases
+
+          if (original.value.slice(a0, a1) !== delText || compared.value.slice(b0, b1) !== insText) continue;
+          const from = parse(delText, a0, markersA);
+          const to = parse(insText, b0, markersB);
+          if (!from.markers.length && !to.markers.length) continue;
+          if (fold(from.plain) !== fold(to.plain)) continue; // the word itself differs, so keep the whole change marked
+
+          const [delB] = del.dataset.b.split(',').map(Number);
+          const [insA] = ins.dataset.a.split(',').map(Number);
+          const id = String(++group);
+          const make = (tag, text, a, b) => {
+            const el = document.createElement(tag);
+            el.dataset.a = a;
+            el.dataset.b = b;
+            el.dataset.g = id;
+            el.textContent = text;
+            return el;
+          };
+
+          const parts = document.createDocumentFragment();
+          const plain = to.plain;
+          const stops = [...new Set([0, plain.length, ...from.markers.map((m) => m.at), ...to.markers.map((m) => m.at)])].sort((x, y) => x - y);
+          stops.forEach((at, i) => {
+            for (const m of from.markers) if (m.at === at) parts.append(make('del', m.text, range(a0 + m.raw, m.text.length), `${delB},${delB}`));
+            for (const m of to.markers) if (m.at === at) parts.append(make('ins', m.text, `${insA},${insA}`, range(b0 + m.raw, m.text.length)));
+            if (i < stops.length - 1) parts.append(plain.slice(at, stops[i + 1]));
+          });
+          ins.remove();
+          del.replaceWith(parts);
+        }
+      }
+
+      /** Red and green only color the text, so an added or removed space would be invisible: give it a tinted background. */
+      function shadeWhitespaceDifferences() {
+        for (const el of output.querySelectorAll('ins, del')) {
+          const text = el.textContent.replace(/\u2060/g, '');
+          if (text && !text.trim()) el.classList.add('ws-diff');
+        }
+      }
+
       /** Display-only: strips style and image markers from the result while keeping their inner text. */
       function hideTagMarkers() {
         if (!options.hideTags) return;
@@ -4015,6 +4268,7 @@
         if (!ranges.length) return;
         ranges.sort((a, b) => a[0] - b[0]);
 
+        const changedParts = new Set(); // result differences whose text lost a marker
         let first = 0;
         for (const span of spans) {
           while (first < ranges.length && ranges[first][1] <= span.start) first++;
@@ -4037,6 +4291,27 @@
           if (!touched) continue;
           if (cursor < span.end) kept += span.value.slice(cursor - span.start);
           span.node.nodeValue = kept;
+          const part = span.node.parentElement && span.node.parentElement.closest('ins, del');
+          if (part && output.contains(part)) changedParts.add(part);
+        }
+
+        // With the markers hidden, a difference that was only a marker is no difference: nothing red or green
+        // is left for it, and the arrows skip it. That covers an image tag with its space, and a styled word
+        // that reads the same as the plain word on the other side.
+        const shown = (el) => el.textContent.replace(/\u2060/g, '');
+        const unwrap = (el) => el.replaceWith(...el.childNodes);
+        for (const part of changedParts) {
+          if (!part.isConnected) continue;
+          if (!shown(part).trim()) {
+            if (part.tagName === 'DEL') part.remove(); else unwrap(part);
+            continue;
+          }
+          const del = part.tagName === 'DEL' ? part : part.previousSibling;
+          const ins = part.tagName === 'INS' ? part : part.nextSibling;
+          if (del && ins && del.tagName === 'DEL' && ins.tagName === 'INS' && del.nextSibling === ins && shown(del) === shown(ins)) {
+            del.remove();
+            unwrap(ins);
+          }
         }
       }
 
@@ -4045,7 +4320,7 @@
          ====================================================================== */
       const panes = {
         original: { element: originalRich, gutter: $('#gutO'), getText: () => original.value },
-        compared: { element: compared, gutter: $('#gutC'), getText: () => compared.value },
+        compared: { element: compared, gutter: $('#gutC'), getText: () => (stylesHidden ? shownComparedText() : compared.value) },
         result: {
           element: output,
           gutter: $('#gutR'),
