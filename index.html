@@ -438,9 +438,9 @@
     .workspace-head {
       display: grid;
       flex: none;
-      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      grid-template-columns: auto auto minmax(0, 1fr);
       align-items: center;
-      gap: 10px;
+      gap: 10px 36px;
       padding: 6px 14px;
       border-bottom: 1px solid var(--line);
       font-size: 18px;
@@ -450,6 +450,11 @@
     .workspace-head > #workspaceTitle {
       min-width: 0;
       white-space: nowrap;
+    }
+
+    .workspace-head .controls {
+      justify-self: start;
+      margin: 0;
     }
 
     .head-actions {
@@ -1707,6 +1712,122 @@
     .pane { margin-top: 6px; }
 
     #hideStylesBtn { min-width: 84px; }
+
+    /* Only differences: unchanged text is hidden in place; a small dots mark stands in where it sat between two changes */
+    #output .fold-part { display: none; }
+    #output .fold-part.between {
+      display: inline;
+      font-size: 0;
+    }
+    #output .fold-part.between::before {
+      content: '\22EF';
+      padding: 0 0.5ch;
+      font-size: calc(14px * var(--zoom, 1));
+      color: #6f7b75;
+    }
+
+    /* ==========================================================================
+       Phones and tablets: comfortable touch targets, full-width popups, no overlap
+       ========================================================================== */
+    @media (max-width: 760px) {
+      .action,
+      .segment button,
+      .tab-add {
+        min-height: 36px;
+        padding: 6px 12px;
+        border-radius: 7px;
+        font-size: 12px;
+      }
+
+      .close-x { width: 36px; height: 36px; }
+
+      .switchline { min-height: 36px; font-size: 13px; }
+      .controls { gap: 4px 16px; }
+      .controls .compareline,
+      .controls .themebar { min-height: 36px; }
+
+      input[type="text"],
+      input:not([type]),
+      select,
+      textarea { font-size: 16px; }
+
+      .box-actions,
+      .compared-toolbar-top,
+      .compared-toolbar-bottom,
+      .result-actions,
+      .head-actions { gap: 7px; }
+
+      .workspace-head > #workspaceTitle { font-size: 16px; }
+      .workspace-head .controls,
+      .workspace-head .head-actions { justify-self: start; justify-content: flex-start; }
+
+      .phrase-panel,
+      .auto-style-panel {
+        width: calc(100vw - 20px);
+        max-width: none;
+        max-height: calc(100dvh - 20px);
+        padding: 14px;
+      }
+
+      .image-panel { min-width: 0; }
+
+      .find-replace-grid { grid-template-columns: minmax(0, 1fr); }
+
+      /* Button rows scroll sideways like on desktop (swipe them), instead of wrapping into tall columns. */
+      .editor:not(.expanded) .box-actions:not(.pinned-end),
+      .editor:not(.expanded) .button-scroll,
+      .result-actions,
+      #styleButtons {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .editor:not(.expanded) .box-actions:not(.pinned-end)::-webkit-scrollbar,
+      .editor:not(.expanded) .button-scroll::-webkit-scrollbar,
+      .result-actions::-webkit-scrollbar,
+      #styleButtons::-webkit-scrollbar { display: none; }
+
+      .editor:not(.expanded) .box-actions:not(.pinned-end) > *,
+      .editor:not(.expanded) .button-scroll > *,
+      .result-actions > *,
+      .result-actions > .result-scroll > *,
+      .result-actions > .result-pinned > *,
+      #styleButtons > * { flex: none; }
+
+      .result-actions { flex: 1 1 100%; }
+      .result-actions > .result-scroll,
+      .result-actions > .result-pinned {
+        flex: none;
+        flex-wrap: nowrap;
+        overflow: visible;
+        margin-left: 0;
+        gap: 7px;
+      }
+      #diffCount { min-width: 0; }
+
+      /* Titles keep their own line; the scrolling button row sits under each. */
+      .original-editor:not(.expanded) .field-head,
+      .result .field-head { flex-wrap: wrap; }
+      .original-editor:not(.expanded) .field-head > label { flex: 1 1 100%; }
+      .original-editor .button-scroll { flex: 1 1 100%; }
+
+      .compared-editor:not(.expanded) .compared-toolbar-top { flex-wrap: wrap; }
+      .compared-editor:not(.expanded) .compared-toolbar-top > label { flex: 1 1 100%; }
+      .compared-editor:not(.expanded) .compared-toolbar-top #styleButtons { flex: 1 1 0; min-width: 0; }
+      .compared-editor:not(.expanded) .compared-toolbar-bottom { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+      .compared-editor:not(.expanded) .compared-toolbar-bottom::-webkit-scrollbar { display: none; }
+      .compared-editor:not(.expanded) .compared-toolbar-bottom > .button-scroll { flex: 1 1 0; }
+    }
+
+    @media (max-width: 560px) {
+      .brand-tagline { display: none; }
+      header small { max-width: none; }
+    }
   </style>
 </head>
 
@@ -1834,6 +1955,9 @@
           <label class="switchline" title="Treat runs of spaces, tabs, and line breaks as equivalent">Ignore whitespace
             <input id="ignoreWhitespace" class="switch" type="checkbox">
           </label>
+          <label class="switchline" hidden title="Combine changes that are only separated by spaces or line breaks into one red block and one green block">Merge changes
+            <input id="mergeChanges" class="switch" type="checkbox">
+          </label>
           <div class="compareline">
             <span>Compare by</span>
             <div class="segment" role="group" aria-label="Comparison mode">
@@ -1857,6 +1981,8 @@
           </label>
           <button id="wrapAll" class="action" type="button" aria-pressed="true" title="Wrap long lines in all three boxes">Wrap lines</button>
           <button id="hotkeysOpen" class="action" type="button">Hotkeys</button>
+          <button id="phrasesBtn" class="action" type="button" aria-expanded="false">Define Capital</button>
+          <button id="autoStylesBtn" class="action" type="button" aria-expanded="false">Define Styles</button>
           <button id="reset" class="reset" type="button" title="Clear both texts, forget the saved picture numbers and reset the text zoom to 100%" aria-label="Clear both texts, forget the saved picture numbers and reset the text zoom to 100%">↻</button>
           <button id="clearCache" class="action danger" type="button" title="Clear saved phrases and shared settings, while preserving every text tab">Clear all cache</button>
         </span>
@@ -1971,19 +2097,18 @@
           <div class="field-head">
             <span class="result-title">
               <span>Comparison result</span>
-              <button id="hideTagsBtn" class="action" type="button" aria-pressed="false" title="Toggle visibility of style and image markers in the result display only">Hide tags in result</button>
+              <button id="hideTagsBtn" class="action" type="button" aria-pressed="false" title="Toggle visibility of style and image markers in the result display only">Hide tags</button>
             </span>
             <div class="result-actions">
               <div class="result-scroll">
-              <button id="phrasesBtn" class="action" type="button" aria-expanded="false">Define Capital</button>
-              <button id="autoStylesBtn" class="action" type="button" aria-expanded="false">Define Styles</button>
               <button id="hlBtn" class="action" type="button" aria-pressed="false" title="Highlight configured capitalization words and style targets">Highlight Phrases</button>
               <button id="markSpaceBtn" class="action" type="button" aria-pressed="false" title="Mark runs of two or more spaces in the result">Mark empty space</button>
+              <button id="onlyDiffBtn" class="action" type="button" aria-pressed="false" title="Show only the red and green text. Every line keeps its row and number, and the unchanged text is hidden. Copy result as text still copies everything.">Only differences</button>
               </div>
               <div class="result-pinned">
               <span id="diffCount" class="diff-count" aria-live="polite"></span>
               <button id="prevDiffBtn" class="action" type="button" title="Previous difference" aria-label="Previous difference" disabled>&lt;</button>
-              <button id="toggleDiffBtn" class="action" type="button" aria-pressed="false" title="Hide or show the orange mark of the current difference in all three boxes">Hide highlight</button>
+              <button id="toggleDiffBtn" class="action" type="button" aria-pressed="false" title="Show or hide the orange mark of the current difference in all three boxes">Highlight Differences</button>
               <button id="nextDiffBtn" class="action" type="button" title="Go to the next difference in the result, Original text and Compared text" disabled>&gt;</button>
               <button id="copy" class="action" type="button">Copy result as text</button>
               </div>
@@ -2012,6 +2137,7 @@
                 <div class="pp-actions pp-actions-split" style="margin-top:6px">
                   <button id="phExport" class="action" type="button" title="Save phrases, the capitalize list and all styles to one file">Export settings</button>
                   <button id="phImport" class="action" type="button" title="Load phrases, the capitalize list and styles from an exported file">Import settings</button>
+                  <button id="phSync" class="action" type="button" title="Download the shared settings and apply them">Sync</button>
                   <input id="phFile" type="file" accept=".json,application/json" hidden>
                   <span class="pp-spacer"></span>
                   <button id="checkDuplicateTargets" class="action" type="button" title="Check the capitalization list for repeated words or phrases">Check duplicates</button>
@@ -2127,6 +2253,7 @@
         { id: 'prevTab', label: 'Previous text tab', fallback: 'Ctrl+Alt+Left' },
         { id: 'nextTab', label: 'Next text tab', fallback: 'Ctrl+Alt+Right' },
         { id: 'copyResult', label: 'Copy result as text', fallback: 'Ctrl+Alt+C' },
+        { id: 'takeChange', label: 'Copy the marked red text into Compared text', fallback: 'Ctrl+Alt+T' },
       ];
       const DEFAULT_HOTKEYS = Object.fromEntries(HOTKEY_DEFS.map((def) => [def.id, def.fallback]));
 
@@ -2509,6 +2636,7 @@
 
       const caseSensitive = $('#caseSensitive');
       const ignoreWhitespace = $('#ignoreWhitespace');
+      const mergeChanges = $('#mergeChanges');
       const wordModeButton = $('#wordMode');
       const charModeButton = $('#charMode');
 
@@ -2516,6 +2644,7 @@
       const highlightButton = $('#hlBtn');
       const hideTagsButton = $('#hideTagsBtn');
       const markSpaceButton = $('#markSpaceBtn');
+      const onlyDiffButton = $('#onlyDiffBtn');
       const prevDiffButton = $('#prevDiffBtn');
       const nextDiffButton = $('#nextDiffBtn');
       const toggleDiffButton = $('#toggleDiffBtn');
@@ -2605,9 +2734,11 @@
           apply: false,
           highlight: false,
           ignoreWhitespace: false,
+          mergeChanges: false,
           hideTags: false,
           markEmptySpace: false,
           hideDiffHighlight: false,
+          onlyDifferences: false,
           markAllMatches: false,
           caseSensitive: true,
           wrap: true,
@@ -2727,9 +2858,11 @@
         if (stored && typeof stored === 'object') {
           options.highlight = Boolean(stored.highlight);
           options.ignoreWhitespace = Boolean(stored.ignoreWhitespace);
+          options.mergeChanges = false; // switch hidden for now; to bring it back: remove the hidden attribute on its label and restore Boolean(stored.mergeChanges)
           options.hideTags = Boolean(stored.hideTags);
           options.markEmptySpace = Boolean(stored.markEmptySpace);
           options.hideDiffHighlight = Boolean(stored.hideDiffHighlight);
+          options.onlyDifferences = Boolean(stored.onlyDifferences);
           options.markAllMatches = Boolean(stored.markAllMatches);
           if (typeof stored.caseSensitive === 'boolean') options.caseSensitive = stored.caseSensitive;
           if (typeof stored.wrap === 'boolean') options.wrap = stored.wrap;
@@ -2921,11 +3054,13 @@
         $('#workspaceBody').dataset.layout = options.layout;
         $('#layoutSelect').value = options.layout;
         ignoreWhitespace.checked = options.ignoreWhitespace;
+        mergeChanges.checked = options.mergeChanges;
         caseSensitive.checked = options.caseSensitive;
         [
           [highlightButton, options.highlight],
           [hideTagsButton, options.hideTags],
           [markSpaceButton, options.markEmptySpace],
+          [onlyDiffButton, options.onlyDifferences],
           [markMatchesButton, options.markAllMatches],
           [wrapButton, options.wrap],
         ].forEach(([button, on]) => {
@@ -3353,6 +3488,59 @@
       /* ======================================================================
          Result rendering
          ====================================================================== */
+      /**
+       * "Merge changes": changes that are only separated by spaces or line breaks become one change, so a stretch
+       * of different text reads as one red block followed by one green block instead of word-by-word pairs
+       * that happen to be held together by matching spaces.
+       */
+      function mergeSeparatedChanges(edits, A, B) {
+        // Split the edits into runs of unchanged tokens and runs of changed ones, tracking token positions.
+        const parts = [];
+        let ai = 0;
+        let bi = 0;
+        for (const edit of edits) {
+          const kind = edit.type === 'same' ? 'same' : 'change';
+          let part = parts[parts.length - 1];
+          if (!part || part.kind !== kind) {
+            part = { kind, aStart: ai, bStart: bi, aEnd: ai, bEnd: bi, edits: [] };
+            parts.push(part);
+          }
+          part.edits.push(edit);
+          if (edit.type !== 'add') { ai++; part.aEnd = ai; }
+          if (edit.type !== 'del') { bi++; part.bEnd = bi; }
+        }
+
+        const blank = (token) => /^\s+$/.test(token);
+        const isGap = (part, index) => {
+          if (part.kind !== 'same' || index === 0 || index === parts.length - 1) return false; // needs a change on each side
+          for (let k = 0; k < part.aEnd - part.aStart; k++) {
+            if (!blank(A.tokens[part.aStart + k]) || !blank(B.tokens[part.bStart + k])) return false;
+          }
+          return true;
+        };
+
+        const result = [];
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          if (part.kind === 'same') { result.push(...part.edits); continue; }
+
+          // Take in every blank gap that follows, together with the change after it.
+          let aEnd = part.aEnd;
+          let bEnd = part.bEnd;
+          while (i + 2 < parts.length && isGap(parts[i + 1], i + 1)) {
+            aEnd = parts[i + 2].aEnd;
+            bEnd = parts[i + 2].bEnd;
+            i += 2;
+          }
+          if (aEnd === part.aEnd && bEnd === part.bEnd) { result.push(...part.edits); continue; }
+
+          const removed = aEnd - part.aStart;
+          for (let k = part.aStart; k < aEnd; k++) result.push({ type: 'del', text: A.tokens[k], ai: k, bi: part.bStart });
+          for (let k = part.bStart; k < bEnd; k++) result.push({ type: 'add', text: B.tokens[k], ai: part.aStart + removed, bi: k });
+        }
+        return result;
+      }
+
       function editsToHtml(edits, A, B) {
         let html = '';
         let run = null; // consecutive add/del tokens merged into one <ins>/<del>
@@ -3361,7 +3549,7 @@
         const flushRun = () => {
           if (!run) return;
           const tag = run.type === 'add' ? 'ins' : 'del';
-          html += `<${tag} data-a="${run.a0},${run.a1}" data-b="${run.b0},${run.b1}">${run.text}</${tag}>`;
+          html += `<${tag} data-a="${run.a0},${run.a1}" data-b="${run.b0},${run.b1}" title="${tag === 'del' ? 'Shift+click: copy this into Compared text' : 'Cmd/Alt+click: remove this from Compared text'}">${run.text}</${tag}>`;
           run = null;
         };
 
@@ -3424,6 +3612,7 @@
         clearTimeout(renderTimer);
         renderTimer = 0;
         clearDifferenceMarks(); // positions of the last difference shown are out of date after any change
+        resultFold = null;
         if (!original.value && !compared.value) {
           output.classList.add('empty');
           output.textContent = COMPARE_PLACEHOLDER;
@@ -3438,7 +3627,8 @@
         const sideA = prepareSide('a', original.value);
         const sideB = prepareSide('b', compared.value);
         output.classList.remove('empty');
-        output.innerHTML = editsToHtml(diff(sideA, sideB), sideA, sideB);
+        const edits = diff(sideA, sideB);
+        output.innerHTML = editsToHtml(options.mergeChanges ? mergeSeparatedChanges(edits, sideA, sideB) : edits, sideA, sideB);
 
         applyPhrasesToResult();
         lastPlainResult = output.textContent; // preserve the tagged result for copying
@@ -3446,6 +3636,7 @@
         hideTagMarkers();
         shadeWhitespaceDifferences();
         applyCategoryHighlights();
+        foldUnchangedText();
         updatePhraseButtons();
         refreshGutters(['result']);
         markSelection();
@@ -3474,10 +3665,9 @@
         const showing = diffRanges.length > 0 && !options.hideDiffHighlight;
         toggleDiffButton.classList.toggle('on', showing);
         toggleDiffButton.setAttribute('aria-pressed', String(showing));
-        toggleDiffButton.textContent = options.hideDiffHighlight ? 'Show highlight' : 'Hide highlight';
       }
 
-      /** Paints or removes the orange mark of the current difference, per the Hide / Show highlight switch. */
+      /** Paints or removes the orange mark of the current difference, per the Highlight Differences switch. */
       function paintDifference() {
         if (highlightsSupported()) {
           if (diffRanges.length && !options.hideDiffHighlight) CSS.highlights.set('diff-current', new Highlight(...diffRanges));
@@ -3508,7 +3698,11 @@
         return groups;
       }
 
+      let counterPosition = 0;
+      let counterTimer = 0;
+
       function updateDifferenceCount(position) {
+        counterPosition = position || 0;
         const total = differenceGroups().length;
         const hasResult = !output.classList.contains('empty');
         prevDiffButton.disabled = nextDiffButton.disabled = !total;
@@ -3565,7 +3759,6 @@
       }
 
       function goToDifference(step) {
-        if (options.hideDiffHighlight) { options.hideDiffHighlight = false; saveOptions(); syncControls(); } // going to a difference shows its mark
         const groups = differenceGroups();
         if (!groups.length) { updateDifferenceCount(); return; }
         let index;
@@ -3579,14 +3772,108 @@
         }
         showDifference(groups[index], index + 1);
       }
+      /* ----- Take this change -----
+         Shift+click on a red piece (or the hotkey for the difference reached with < >) copies that text from
+         Original into Compared. If a green piece sits next to it, the red text replaces the green; if not, it is
+         inserted where it is missing. Only words and . , ! ? are copied, never image or style tags. The edit goes
+         in as one undo step of the Compared box, then the next difference is shown. */
+      const TAKEABLE_RE = /^[\p{L}\p{N}\p{P}\p{S}\s]+$/u; // plain text only; image and style tags are refused first, by TAG_RE
+      const HAS_TEXT_RE = /[\p{L}\p{N}\p{P}\p{S}]/u;
+      const TAG_RE = /image\[_image_\d+_\]|_style_[A-Za-z0-9_-]+_\[|_\*style_|[\[\]]/;
+
+      function flashCounter(message, explanation) {
+        clearTimeout(counterTimer);
+        diffCount.textContent = message;
+        diffCount.title = explanation || '';
+        const done = message === 'Copied' || message === 'Removed';
+        counterTimer = setTimeout(() => { diffCount.title = ''; updateDifferenceCount(counterPosition); }, done ? 1800 : 4000);
+      }
+
+      /** Replaces one range of Compared text as a single undo step (an empty text deletes it). */
+      function editCompared(from, to, text) {
+        const value = compared.value;
+        compared.focus({ preventScroll: true });
+        compared.setSelectionRange(from, to);
+        let done = false;
+        try { done = text ? document.execCommand('insertText', false, text) : document.execCommand('delete'); } catch { /* falls back below */ }
+        const expected = value.slice(0, from) + text + value.slice(to);
+        if (!done || compared.value !== expected) {
+          compared.value = expected;
+          compared.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+
+      function takeChange(piece) {
+        if (!piece || piece.tagName !== 'DEL') return flashCounter('Red only', 'Shift+click copies red text. Cmd/Alt+click removes green text.');
+        const [a0, a1] = piece.dataset.a.split(',').map(Number);
+        const wanted = original.value.slice(a0, a1);
+        if (TAG_RE.test(wanted)) return flashCounter('Has a tag', 'This text contains an image or style tag, so it is not copied.');
+        if (!TAKEABLE_RE.test(wanted) || !HAS_TEXT_RE.test(wanted)) return flashCounter('Text only', 'Only plain text can be copied: no tags, images or hidden characters, and not just spaces.');
+
+        const value = compared.value;
+        const mate = [piece.nextSibling, piece.previousSibling].find((el) => el && el.nodeType === 1 && el.tagName === 'INS' && el.dataset.b);
+        let from;
+        let to;
+        if (mate) {
+          [from, to] = mate.dataset.b.split(',').map(Number);
+          if (TAG_RE.test(value.slice(from, to))) return flashCounter('Has a tag', 'The green text next to it contains a tag, so it is not replaced.');
+        } else {
+          from = to = Number(piece.dataset.b.split(',')[0]);
+          if (value[from - 1] === '[' || value[from] === ']') return flashCounter('Has a tag', 'It would land inside a style tag.');
+        }
+
+        editCompared(from, to, wanted);
+
+        renderDiff();
+        const groups = differenceGroups();
+        const next = groups.findIndex((group) => group.a[0] >= a1);
+        if (next >= 0) showDifference(groups[next], next + 1);
+        flashCounter('Copied', 'Copied from Original into Compared text. Ctrl/Cmd+Z in Compared text undoes it.');
+      }
+
+      /** Cmd/Alt+click on a green piece: take that text out of Compared text, with the same rules as for red text. */
+      function removeAddition(piece) {
+        if (!piece || piece.tagName !== 'INS') return flashCounter('Green only', 'Cmd/Alt+click removes green text. Shift+click copies red text.');
+        const [from, to] = piece.dataset.b.split(',').map(Number);
+        const unwanted = compared.value.slice(from, to);
+        if (TAG_RE.test(unwanted)) return flashCounter('Has a tag', 'This text contains an image or style tag, so it is not removed.');
+        if (!TAKEABLE_RE.test(unwanted) || !HAS_TEXT_RE.test(unwanted)) return flashCounter('Text only', 'Only plain text can be removed: no tags, images or hidden characters, and not just spaces.');
+
+        const spot = Number(piece.dataset.a.split(',')[0]); // where it sat in Original text, which does not change
+        editCompared(from, to, '');
+        renderDiff();
+        const groups = differenceGroups();
+        const next = groups.findIndex((group) => group.a[1] >= spot);
+        if (next >= 0) showDifference(groups[next], next + 1);
+        flashCounter('Removed', 'Removed from Compared text. Ctrl/Cmd+Z in Compared text undoes it.');
+      }
+
+      /** Hotkey: take the difference currently marked (clicked, or reached with < >). */
+      function takeCurrentChange() {
+        const groups = differenceGroups();
+        const group = groups.find((item) => item.key === diffKey)
+          || groups.find((item) => diffTarget && diffTarget.a && item.a[0] <= diffTarget.a[0] && item.a[1] >= diffTarget.a[1]);
+        if (!group) return flashCounter('Pick one', 'Click a difference or use < > first.');
+        for (let el = group.firstEl; el; el = el.nextSibling) {
+          if (el.nodeType === 1 && el.tagName === 'DEL') return takeChange(el);
+          if (el === group.lastEl) break;
+        }
+        return flashCounter('Red only', 'Only red text can be copied into Compared text.');
+      }
+
+      output.addEventListener('mousedown', (event) => { // Shift, Cmd or Alt + click must not start a text selection
+        if ((event.shiftKey || event.metaKey || event.altKey) && event.target.closest && event.target.closest('ins[data-a], del[data-a]')) event.preventDefault();
+      });
+
       /** Clicking a red or green piece of the result marks only that piece: red shows its text in Original, green in Compared. */
       output.addEventListener('click', (event) => {
         const piece = event.target.closest && event.target.closest('ins[data-a], del[data-a]');
         if (!piece || !output.contains(piece)) return;
+        if (event.shiftKey) { takeChange(piece); return; }
+        if (event.metaKey || event.altKey) { removeAddition(piece); return; }
         const picked = window.getSelection();
         if (picked && !picked.isCollapsed) return; // a drag-selection is not a click on a difference
         if (!piece.textContent.replace(/\u2060/g, '')) return;
-        if (options.hideDiffHighlight) { options.hideDiffHighlight = false; saveOptions(); syncControls(); }
 
         const isRemoved = piece.tagName === 'DEL';
         const a = piece.dataset.a.split(',').map(Number);
@@ -3616,7 +3903,19 @@
         });
         updateDifferenceCount(index >= 0 ? index + 1 : undefined);
       });
-      toggleDiffButton.addEventListener('click', () => { options.hideDiffHighlight = !options.hideDiffHighlight; saveOptions(); paintDifference(); });
+      toggleDiffButton.addEventListener('click', () => {
+        if (diffRanges.length && !options.hideDiffHighlight) { // a mark is showing: hide it
+          options.hideDiffHighlight = true;
+          saveOptions();
+          paintDifference();
+          return;
+        }
+        options.hideDiffHighlight = false;
+        saveOptions();
+        if (diffRanges.length) { paintDifference(); return; } // a difference was already picked: show its mark again
+        diffKey = -1; // nothing picked yet: start at the first difference
+        goToDifference(1);
+      });
       nextDiffButton.addEventListener('click', () => goToDifference(1));
       prevDiffButton.addEventListener('click', () => goToDifference(-1));
 
@@ -4222,6 +4521,84 @@
         }
       }
 
+      /* ----- Only differences -----
+         Every line keeps its row and its number, but only the red and green text stays visible on it. The other
+         text is hidden in place (the page still holds it, so offsets, selection and the copy button keep working
+         on the whole result). Where unchanged text between two changes on the same line is hidden, a small
+         "..." shows that something was left out. */
+      let resultFold = null; // { visible } while the unchanged text is hidden: the text the gutter has to measure
+
+      function foldUnchangedText() {
+        resultFold = null;
+        if (!options.onlyDifferences || output.classList.contains('empty')) return;
+
+        let fullText = '';
+        const spans = getTextNodes().map((node) => {
+          const start = fullText.length;
+          fullText += node.nodeValue || '';
+          const piece = node.parentElement && node.parentElement.closest('ins, del');
+          const changed = Boolean(piece && output.contains(piece) && piece.dataset.a && (node.nodeValue || '').replace(/⁠/g, ''));
+          return { node, start, end: fullText.length, changed };
+        });
+        if (!spans.some((span) => span.changed)) return;
+
+        // First and last changed character on each line, to tell where a hidden stretch sits between two changes.
+        const lineStarts = [0];
+        for (let i = fullText.indexOf('\n'); i !== -1; i = fullText.indexOf('\n', i + 1)) lineStarts.push(i + 1);
+        const lineOf = (offset) => {
+          let lo = 0;
+          let hi = lineStarts.length - 1;
+          while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (lineStarts[mid] <= offset) lo = mid; else hi = mid - 1; }
+          return lo;
+        };
+        const firstChange = new Map();
+        const lastChange = new Map();
+        for (const span of spans) {
+          if (!span.changed) continue;
+          for (let line = lineOf(span.start); line <= lineOf(Math.max(span.start, span.end - 1)); line++) {
+            const from = Math.max(span.start, lineStarts[line]);
+            const to = Math.min(span.end, line + 1 < lineStarts.length ? lineStarts[line + 1] - 1 : span.end);
+            if (to <= from) continue;
+            if (!firstChange.has(line)) firstChange.set(line, from);
+            lastChange.set(line, to);
+          }
+        }
+
+        let visible = '';
+        for (const span of spans) {
+          const text = span.node.nodeValue || '';
+          if (span.changed) { visible += text; continue; }
+
+          // Hidden stretches of this text node: each run of non-blank characters inside one line.
+          const runs = [];
+          for (const match of text.matchAll(/[^\n]*\S[^\n]*/g)) {
+            const from = span.start + match.index;
+            const to = from + match[0].length;
+            const line = lineOf(from);
+            const between = firstChange.has(line) && firstChange.get(line) < from && lastChange.get(line) > to;
+            runs.push({ from: match.index, to: match.index + match[0].length, between });
+          }
+          let cursor = 0;
+          for (const run of runs) {
+            visible += text.slice(cursor, run.from) + (run.between ? '⋯' : '');
+            cursor = run.to;
+          }
+          visible += text.slice(cursor);
+
+          for (let k = runs.length - 1; k >= 0; k--) { // last run first, so earlier offsets stay valid
+            const run = runs[k];
+            let target = span.node;
+            if (run.to < target.nodeValue.length) target.splitText(run.to);
+            if (run.from > 0) target = target.splitText(run.from);
+            const wrap = document.createElement('span');
+            wrap.className = run.between ? 'fold-part between' : 'fold-part';
+            target.replaceWith(wrap);
+            wrap.append(target);
+          }
+        }
+        resultFold = { visible };
+      }
+
       /** Display-only: strips style and image markers from the result while keeping their inner text. */
       function hideTagMarkers() {
         if (!options.hideTags) return;
@@ -4324,7 +4701,7 @@
         result: {
           element: output,
           gutter: $('#gutR'),
-          getText: () => (output.classList.contains('empty') ? null : output.textContent),
+          getText: () => (output.classList.contains('empty') ? null : resultFold ? resultFold.visible : output.textContent),
         },
       };
 
@@ -4748,18 +5125,72 @@
           return;
         }
 
-        const payload = { app: 'text-compare', version: 3, phrases, uppercaseTargets: options.uppercaseTargets, styles };
+        const payload = { app: 'text-compare', version: 3, revision: new Date().toISOString(), phrases, uppercaseTargets: options.uppercaseTargets, styles };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'text-compare-settings.json';
+        link.download = 'settings.json';
         document.body.appendChild(link);
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-        phraseStatus.textContent = `Exported ${phrases.length} phrase${phrases.length === 1 ? '' : 's'}, ${capitalize} capitalize entr${capitalize === 1 ? 'y' : 'ies'} and ${options.styleCount} style${options.styleCount === 1 ? '' : 's'} to text-compare-settings.json.`;
+        phraseStatus.textContent = `Exported ${phrases.length} phrase${phrases.length === 1 ? '' : 's'}, ${capitalize} capitalize entr${capitalize === 1 ? 'y' : 'ies'} and ${options.styleCount} style${options.styleCount === 1 ? '' : 's'} to settings.json.`;
+      }
+
+      /** Applies a settings object (from an exported file or from the shared settings.json). Returns a summary line. */
+      function applySettingsData(data) {
+        const list = Array.isArray(data) ? data : data && Array.isArray(data.phrases) ? data.phrases : null;
+        if (!list) throw new Error('no phrase list found');
+
+        // Styles: the imported count, names, targets and regex flags replace the current ones.
+        const styles = data && data.styles && typeof data.styles === 'object' ? data.styles : null;
+        if (styles && Number.isInteger(styles.count) && styles.count >= 1 && styles.count <= MAX_STYLES) options.styleCount = styles.count;
+        for (const id of STYLE_IDS) {
+          const name = (styles && styles.names && styles.names[id]) ?? (data && data.styleNames && data.styleNames[id]);
+          if (typeof name === 'string' && name.trim()) options.styleNames[id] = name.trim().slice(0, MAX_STYLE_NAME_LENGTH);
+          if (styles && styles.words && typeof styles.words[id] === 'string') options.styleWords[id] = styles.words[id];
+          if (styles && styles.regex && typeof styles.regex[id] === 'boolean') options.styleRegexByStyle[id] = styles.regex[id];
+        }
+
+        // Capitalize list: entries that are not in the current list are added.
+        let capitalizeAdded = 0;
+        if (data && typeof data.uppercaseTargets === 'string') {
+          const current = splitTargetList(options.uppercaseTargets);
+          const known = new Set(current.map((item) => item.toLocaleLowerCase()));
+          for (const item of splitTargetList(data.uppercaseTargets)) {
+            if (known.has(item.toLocaleLowerCase())) continue;
+            known.add(item.toLocaleLowerCase());
+            current.push(item);
+            capitalizeAdded++;
+          }
+          options.uppercaseTargets = current.join(', ');
+          uppercaseTargetsInput.value = options.uppercaseTargets;
+        }
+        saveOptions();
+        syncStyleControls();
+
+        let added = 0;
+        let updated = 0;
+        for (const item of list) {
+          if (!item || typeof item.find !== 'string' || !item.find.trim() || typeof item.repl !== 'string') continue;
+
+          const style = sanitizeStyleName(item.style);
+          const index = phrases.findIndex((phrase) => phrase.find === item.find);
+          if (index < 0) {
+            phrases.push({ find: item.find, repl: item.repl, style });
+            added++;
+          } else if (phrases[index].repl !== item.repl || phrases[index].style !== style) {
+            phrases[index] = { find: item.find, repl: item.repl, style };
+            updated++;
+          }
+        }
+
+        savePhrases();
+        renderPhrases();
+        renderDiff();
+        return `${added} new and ${updated} updated phrases, ${capitalizeAdded} new capitalize entries${styles ? `, ${options.styleCount} styles` : ''}`;
       }
 
       function importPhrases(file) {
@@ -4769,63 +5200,59 @@
         };
         reader.onload = () => {
           try {
-            const data = JSON.parse(reader.result);
-            const list = Array.isArray(data) ? data : data && Array.isArray(data.phrases) ? data.phrases : null;
-            if (!list) throw new Error('no phrase list found');
-
-            // Styles: the imported count, names, targets and regex flags replace the current ones.
-            const styles = data && data.styles && typeof data.styles === 'object' ? data.styles : null;
-            if (styles && Number.isInteger(styles.count) && styles.count >= 1 && styles.count <= MAX_STYLES) options.styleCount = styles.count;
-            for (const id of STYLE_IDS) {
-              const name = (styles && styles.names && styles.names[id]) ?? (data && data.styleNames && data.styleNames[id]);
-              if (typeof name === 'string' && name.trim()) options.styleNames[id] = name.trim().slice(0, MAX_STYLE_NAME_LENGTH);
-              if (styles && styles.words && typeof styles.words[id] === 'string') options.styleWords[id] = styles.words[id];
-              if (styles && styles.regex && typeof styles.regex[id] === 'boolean') options.styleRegexByStyle[id] = styles.regex[id];
-            }
-
-            // Capitalize list: entries that are not in the current list are added.
-            let capitalizeAdded = 0;
-            if (data && typeof data.uppercaseTargets === 'string') {
-              const current = splitTargetList(options.uppercaseTargets);
-              const known = new Set(current.map((item) => item.toLocaleLowerCase()));
-              for (const item of splitTargetList(data.uppercaseTargets)) {
-                if (known.has(item.toLocaleLowerCase())) continue;
-                known.add(item.toLocaleLowerCase());
-                current.push(item);
-                capitalizeAdded++;
-              }
-              options.uppercaseTargets = current.join(', ');
-              uppercaseTargetsInput.value = options.uppercaseTargets;
-            }
-            saveOptions();
-            syncStyleControls();
-
-            let added = 0;
-            let updated = 0;
-            for (const item of list) {
-              if (!item || typeof item.find !== 'string' || !item.find.trim() || typeof item.repl !== 'string') continue;
-
-              const style = sanitizeStyleName(item.style);
-              const index = phrases.findIndex((phrase) => phrase.find === item.find);
-              if (index < 0) {
-                phrases.push({ find: item.find, repl: item.repl, style });
-                added++;
-              } else if (phrases[index].repl !== item.repl || phrases[index].style !== style) {
-                phrases[index] = { find: item.find, repl: item.repl, style };
-                updated++;
-              }
-            }
-
-            savePhrases();
-            renderPhrases();
-            renderDiff();
-            phraseStatus.textContent = `Imported: ${added} new and ${updated} updated phrases, ${capitalizeAdded} new capitalize entries${styles ? `, ${options.styleCount} styles` : ''}.`;
+            phraseStatus.textContent = `Imported: ${applySettingsData(JSON.parse(reader.result))}.`;
           } catch (error) {
             phraseStatus.textContent = `Import failed: ${error.message}.`;
           }
         };
         reader.readAsText(file);
       }
+
+      /* ----- Sync: shared settings.json next to this page -----
+         The owner exports the settings, renames the file to settings.json and uploads it beside index.html.
+         Sync downloads it and applies it like an import (words merged, styles replaced). The file carries a
+         revision stamp, so the button lights up when the owner has published something new. */
+      const SHARED_SETTINGS_URL = 'settings.json';
+      const SYNC_REVISION_KEY = 'tc-synced-revision';
+      const syncButton = $('#phSync');
+      const readSyncedRevision = () => { try { return localStorage.getItem(SYNC_REVISION_KEY) || ''; } catch { return ''; } };
+      const writeSyncedRevision = (value) => { try { localStorage.setItem(SYNC_REVISION_KEY, value); } catch {} };
+
+      async function fetchSharedSettings() {
+        const response = await fetch(`${SHARED_SETTINGS_URL}?t=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(response.status === 404 ? 'no settings.json next to this page' : `server answered ${response.status}`);
+        return response.json();
+      }
+
+      async function syncSharedSettings() {
+        if (!/^https?:$/.test(location.protocol)) { phraseStatus.textContent = 'Sync works on the published page, not on a file opened from disk.'; return; }
+        phraseStatus.textContent = 'Syncing…';
+        try {
+          const data = await fetchSharedSettings();
+          const summary = applySettingsData(data);
+          if (data && data.revision) writeSyncedRevision(String(data.revision));
+          syncButton.classList.remove('pulse');
+          syncButton.title = 'Download the shared settings and apply them';
+          phraseStatus.textContent = `Synced: ${summary}.`;
+        } catch (error) {
+          phraseStatus.textContent = `Sync failed: ${error.message}.`;
+        }
+      }
+
+      /** On load: if the shared file has a newer revision than the one last synced, light up the Sync button. */
+      async function checkForSharedUpdate() {
+        if (!/^https?:$/.test(location.protocol)) return;
+        try {
+          const data = await fetchSharedSettings();
+          if (data && data.revision && String(data.revision) !== readSyncedRevision()) {
+            syncButton.classList.add('pulse');
+            syncButton.title = 'New shared settings are available. Click to apply them.';
+            phrasesButton.classList.add('pulse');
+          }
+        } catch { /* no shared file, nothing to announce */ }
+      }
+      syncButton.addEventListener('click', () => { phrasesButton.classList.remove('pulse'); syncSharedSettings(); });
+      checkForSharedUpdate();
 
       /* ======================================================================
          Text transformations (Original and Compared boxes)
@@ -5777,6 +6204,11 @@
         };
       }
 
+      hotkeyActions.takeChange = (event) => {
+        event.preventDefault();
+        takeCurrentChange();
+      };
+
       function stepWorkspace(direction) {
         if (workspaces.length < 2) return;
         const index = workspaces.findIndex((workspace) => workspace.id === activeWorkspaceId);
@@ -6390,6 +6822,12 @@
         renderDiff();
       });
 
+      mergeChanges.addEventListener('change', () => {
+        options.mergeChanges = mergeChanges.checked;
+        saveOptions();
+        renderDiff();
+      });
+
       ignoreWhitespace.addEventListener('change', () => {
         options.ignoreWhitespace = ignoreWhitespace.checked;
         saveOptions();
@@ -6429,6 +6867,7 @@
       }
       highlightButton.addEventListener('click', toggleOption('highlight'));
       hideTagsButton.addEventListener('click', toggleOption('hideTags'));
+      onlyDiffButton.addEventListener('click', toggleOption('onlyDifferences'));
       // Only hidden image tags change how the result is built; otherwise the marks alone are redrawn.
       markSpaceButton.addEventListener('click', () => {
         options.markEmptySpace = !options.markEmptySpace;
