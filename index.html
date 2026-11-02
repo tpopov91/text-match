@@ -1133,6 +1133,29 @@
     .category-highlight { --highlight-color: var(--accent); display: inline; border-radius: 4px; padding: 0.04em 0.2em; color: var(--text) !important; background: color-mix(in srgb, var(--highlight-color) 24%, var(--panel)); border: 1px solid color-mix(in srgb, var(--highlight-color) 58%, var(--ctl-line)); box-shadow: none; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
     .style-buttons { margin-right: 0; }
 
+    #hideStylesBtn { min-width: 84px; }
+    .icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; }
+    .icon-btn .btn-glyph { font: 700 11px/1 var(--mono); letter-spacing: 0.2px; }
+    .icon-btn .btn-svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .word-rows-group { display: inline-flex; flex: none; align-items: center; gap: 0; }
+    .word-rows-group #wordRowsBtn { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .word-rows-group #wordRowsCount::-webkit-outer-spin-button,
+    .word-rows-group #wordRowsCount::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .word-rows-group #wordRowsCount {
+      -moz-appearance: textfield;
+      appearance: textfield;
+      width: 52px;
+      box-sizing: border-box;
+      min-height: 22px;
+      padding: 3px 4px;
+      border: 1px solid var(--ctl-line, var(--line));
+      border-left: 0;
+      border-radius: 0 5px 5px 0;
+      background: var(--panel);
+      color: var(--text);
+      font: 11px var(--mono);
+      text-align: center;
+    }
     .image-panel { min-width: min(440px, calc(100vw - 32px)); }
 
     .image-list {
@@ -1711,7 +1734,6 @@
     /* A little air between each toolbar and the box under it */
     .pane { margin-top: 6px; }
 
-    #hideStylesBtn { min-width: 84px; }
 
     /* Only differences: unchanged text is hidden in place; a small dots mark stands in where it sat between two changes */
     #output .fold-part { display: none; }
@@ -2055,18 +2077,19 @@
                 </div>
                 <div class="compared-toolbar-bottom box-actions pinned-end">
                   <div class="button-scroll">
-                    <button id="caseUpper" class="action" type="button" title="Convert to UPPERCASE: selected text only, or all text when nothing is selected">UPPERCASE</button>
-                    <button id="caseLower" class="action" type="button" title="Convert to lowercase: selected text only, or all text when nothing is selected">lowercase</button>
+                    <button id="caseUpper" class="action icon-btn" type="button" title="Convert to UPPERCASE: selected text only, or all text when nothing is selected" aria-label="UPPERCASE"><span class="btn-glyph" aria-hidden="true">AA</span></button>
+                    <button id="caseLower" class="action icon-btn" type="button" title="Convert to lowercase: selected text only, or all text when nothing is selected" aria-label="lowercase"><span class="btn-glyph" aria-hidden="true">aa</span></button>
                     <!-- Proper Case is switched off, not removed. To bring it back: uncomment this button, the caseButtons.proper line and the two caseProper hotkey lines in the script.
                     <button id="caseProper" class="action" type="button" title="Capitalize the first letter of each word">Proper Case</button>
                     -->
-                    <button id="caseSentence" class="action" type="button" title="Sentence case: selected text only, or all text when nothing is selected">Sentence case</button>
-                    <button id="uppercaseInserted" class="action" type="button" title="Capitalize all configured words and phrases in Compared text">CAPITALIZE MATCHES</button>
-                    <button id="markMatchesBtn" class="action" type="button" aria-pressed="false" title="Select a word in Compared text and shade every occurrence of it in this box">Mark all matches</button>
-                    <button id="findReplaceToggle" class="action" type="button" aria-expanded="false">Find &amp; Replace</button>
+                    <button id="caseSentence" class="action icon-btn" type="button" title="Sentence case: selected text only, or all text when nothing is selected" aria-label="Sentence case"><span class="btn-glyph" aria-hidden="true">Aa.</span></button>
+                    <button id="uppercaseInserted" class="action" type="button" title="Capitalize all configured words and phrases in Compared text">CAPITALIZE WORDS</button>
+                    <button id="markMatchesBtn" class="action icon-btn" hidden type="button" aria-pressed="false" title="Select a word in Compared text and shade every occurrence of it in this box" aria-label="Mark matches"><svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l9-9 4 4-9 9H4z"/><path d="M12 8l4 4"/><path d="M3 22h18" stroke-width="2.6"/></svg></button>
+                    <button id="findReplaceToggle" class="action" type="button" aria-expanded="false" hidden>Find &amp; Replace</button>
                     <button id="fixComparedSpaces" class="action" type="button" title="Collapse runs of two or more spaces into one in Compared text">Fix spaces</button>
                     <button id="fixComparedGrammar" class="action" type="button" title="Fix punctuation spacing, including adding a space after . ! ? when needed">Fix Grammar</button>
                     <button id="splitSentencesBtn" class="action" type="button" title="Put the text on one line, then start a new row after ., ?, ! and ; (not after numbers such as 2. or after .,)">New row on each sentence</button>
+                    <span class="word-rows-group"><button id="wordRowsBtn" class="action" type="button" title="Rebuild the text so every row has this many words (selected text only, or all text when nothing is selected). Style tags are never cut in half and picture tags are not counted. Empty lines stay where they are.">Words per row</button><input id="wordRowsCount" type="number" inputmode="numeric" min="1" max="999" step="1" value="30" aria-label="Words in each row" title="Words in each row"></span>
                     <button id="hideStylesBtn" class="action" type="button" aria-pressed="false" title="Hide the style tags in Compared text while you edit. The tags are kept and come back when you show them again.">Hide styles</button>
                   </div>
                   <button id="expandCompared" class="action expand-button" type="button" aria-pressed="false">Expand editor</button>
@@ -2130,7 +2153,7 @@
               </div>
               <div class="uppercase-section">
                 <p class="pp-title">Capitalize words in Compared text</p>
-                <p class="pp-note">Enter words or phrases separated by commas. Matching is case-insensitive. Use CAPITALIZE MATCHES in the Compared text toolbar to capitalize every matching whole word or phrase in Compared text only.</p>
+                <p class="pp-note">Enter words or phrases separated by commas. Matching is case-insensitive. Use CAPITALIZE WORDS in the Compared text toolbar to capitalize every matching whole word or phrase in Compared text only.</p>
                 <div class="pp-row">
                   <textarea id="uppercaseTargets" rows="5" wrap="soft" placeholder="Words or phrases, e.g. example, inserted phrase" spellcheck="false" aria-label="Words or phrases to capitalize in Compared text"></textarea>
                 </div>
@@ -2735,11 +2758,12 @@
           highlight: false,
           ignoreWhitespace: false,
           mergeChanges: false,
+          wordsPerRow: 30,
           hideTags: false,
           markEmptySpace: false,
           hideDiffHighlight: false,
           onlyDifferences: false,
-          markAllMatches: false,
+          markAllMatches: true,
           caseSensitive: true,
           wrap: true,
           layout: 'stack',
@@ -2799,8 +2823,8 @@
         const state = getButtonState(button);
         if (!state.hasMessage) {
           state.hasMessage = true;
-          state.label = button.textContent;
-          button.style.width = `${button.offsetWidth}px`; // lock the size while the message shows
+          state.label = button.innerHTML;
+          if (!button.classList.contains('icon-btn')) button.style.width = `${button.offsetWidth}px`; // lock the size while the message shows (icon buttons grow for the message)
           button.classList.add('has-message');
         }
         state.onRestore = onRestore;
@@ -2814,7 +2838,7 @@
         if (!state.hasMessage) return;
         clearTimeout(state.messageTimer);
         state.hasMessage = false;
-        button.textContent = state.label;
+        button.innerHTML = state.label;
         button.style.width = '';
         button.classList.remove('has-message');
         if (state.onRestore) state.onRestore();
@@ -2860,10 +2884,11 @@
           options.ignoreWhitespace = Boolean(stored.ignoreWhitespace);
           options.mergeChanges = false; // switch hidden for now; to bring it back: remove the hidden attribute on its label and restore Boolean(stored.mergeChanges)
           options.hideTags = Boolean(stored.hideTags);
+          options.wordsPerRow = Math.min(999, Math.max(1, Math.round(Number(stored.wordsPerRow)) || 30));
           options.markEmptySpace = Boolean(stored.markEmptySpace);
           options.hideDiffHighlight = Boolean(stored.hideDiffHighlight);
           options.onlyDifferences = Boolean(stored.onlyDifferences);
-          options.markAllMatches = Boolean(stored.markAllMatches);
+          options.markAllMatches = true; // always on for now (button hidden); to bring the switch back: restore Boolean(stored.markAllMatches) and remove hidden from #markMatchesBtn
           if (typeof stored.caseSensitive === 'boolean') options.caseSensitive = stored.caseSensitive;
           if (typeof stored.wrap === 'boolean') options.wrap = stored.wrap;
           if (LAYOUT_IDS.includes(stored.layout)) options.layout = stored.layout;
@@ -3055,6 +3080,7 @@
         $('#layoutSelect').value = options.layout;
         ignoreWhitespace.checked = options.ignoreWhitespace;
         mergeChanges.checked = options.mergeChanges;
+        wordRowsCount.value = options.wordsPerRow;
         caseSensitive.checked = options.caseSensitive;
         [
           [highlightButton, options.highlight],
@@ -3144,7 +3170,10 @@
           if (document.activeElement !== nameInput) nameInput.value = label;
           if (document.activeElement !== wordsInput) wordsInput.value = options.styleWords[id] || '';
           $(`#styleRegex${n}`).checked = Boolean(options.styleRegexByStyle[id]);
-          $(`#applyStyle${n}`).textContent = `Apply ${label}`;
+          const styleButton = $(`#applyStyle${n}`);
+          styleButton.textContent = label;
+          styleButton.title = `Apply ${label} to the selected text in Compared text`;
+          styleButton.setAttribute('aria-label', `Apply ${label}`);
         }
         updateStyleCountControls();
       }
@@ -4204,6 +4233,10 @@
         stylesHideButton.classList.toggle('on', stylesHidden);
         stylesHideButton.setAttribute('aria-pressed', String(stylesHidden));
         stylesHideButton.textContent = stylesHidden ? 'Show styles' : 'Hide styles';
+        stylesHideButton.removeAttribute('aria-label');
+        stylesHideButton.title = stylesHidden
+          ? 'Show the style tags again in Compared text'
+          : 'Hide the style tags in Compared text while you edit. The tags are kept and come back when you show them.';
         markMatchesInCompared();
         refreshGutters(['compared']);
       }
@@ -5480,6 +5513,80 @@
         else showButtonMessage($('#splitSentencesBtn'), 'No changes');
       }
       $('#splitSentencesBtn').addEventListener('click', splitComparedRows);
+
+      // ----- Words per row -----
+      const wordRowsButton = $('#wordRowsBtn');
+      const wordRowsCount = $('#wordRowsCount');
+
+      // Rebuild text so every row has about `limit` words. A style block (_style_x_[...]) is never split: it moves
+      // to the next row whole when it does not fit. Picture tags count as zero words.
+      function wrapWordsPerRow(text, limit, keepParagraphs) {
+        const parts = keepParagraphs ? text.split(/(\n[ \t]*\n\s*)/) : [text];
+        return parts.map((part, index) => {
+          if (keepParagraphs && index % 2 === 1) return part; // the blank-line separators stay exactly as they were
+          const guarded = part.replace(STYLE_BLOCK_RE, (block) => block.replace(/\s+/g, '\u0001'));
+          const tokens = guarded.split(/\s+/).filter(Boolean);
+          const rows = [];
+          let row = [];
+          let count = 0;
+          for (const token of tokens) {
+            const weight = /^image\[_image_\d+_\]$/.test(token)
+              ? 0
+              : Math.max(1, token.split('\u0001').filter(Boolean).length);
+            if (row.length && count + weight > limit) {
+              rows.push(row.join(' '));
+              row = [];
+              count = 0;
+            }
+            row.push(token.replace(/\u0001/g, ' '));
+            count += weight;
+          }
+          if (row.length) rows.push(row.join(' '));
+          return rows.join('\n');
+        }).join('');
+      }
+
+      function wordRowsSelection() {
+        const start = compared.selectionStart;
+        const end = compared.selectionEnd;
+        return start !== end ? [Math.min(start, end), Math.max(start, end)] : null;
+      }
+
+      function wordRowsLimit() {
+        return Math.min(999, Math.max(1, Math.round(Number(wordRowsCount.value)) || 0));
+      }
+
+      function applyWordRows() {
+        const limit = wordRowsLimit();
+        if (!Number(wordRowsCount.value)) { wordRowsCount.focus(); return; }
+        options.wordsPerRow = limit;
+        wordRowsCount.value = limit;
+        saveOptions();
+
+        const before = compared.value;
+        const selection = wordRowsSelection();
+        let result;
+        if (selection) {
+          const [from, to] = selection;
+          const chunk = before.slice(from, to);
+          const lead = chunk.match(/^\s*/)[0];
+          const trail = chunk.match(/\s*$/)[0];
+          result = before.slice(0, from) + lead + wrapWordsPerRow(chunk.trim(), limit, true) + (chunk.trim() ? trail : '') + before.slice(to);
+        } else {
+          result = wrapWordsPerRow(before, limit, true);
+        }
+        replaceTextBox(compared, result, wordRowsButton);
+      }
+
+      wordRowsButton.addEventListener('click', applyWordRows);
+      wordRowsCount.addEventListener('change', () => {
+        options.wordsPerRow = wordRowsLimit();
+        wordRowsCount.value = options.wordsPerRow;
+        saveOptions();
+      });
+      wordRowsCount.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); applyWordRows(); }
+      });
 
       // ----- Style tagging -----
       function applyStyleTargets(textarea, targets, style, useRegex) {
