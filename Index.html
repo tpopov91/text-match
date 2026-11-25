@@ -3900,26 +3900,119 @@
         }).join('');
       }
 
+      /* ----- Tags around the copied text -----
+         Image tags and style tags in Compared text stay where they are:
+         - green text with a style tag, such as _style_dog_[dog], gets its word replaced inside the tag: _style_dog_[cat]
+         - green text that is only an image tag is kept; the red text goes next to it, before it when the red piece is
+           shown first (the usual order) and after it otherwise
+         - a copied word never ends up glued to an image tag: a space is added on that side, the same rule as Fix spaces
+           (no space is added next to punctuation, a line break or an opening bracket). */
+      const MARKUP_RE = /image\[_image_\d+_\]|_style_[A-Za-z0-9_-]+_\[|_\*style_[^\[\]\n]*\[|\[|\]/gi;
+
+      /** Is a style tag open at this spot? Same rule as the diff: a ] closes only a style that was opened before. */
+      function styleOpenAt(text, pos) {
+        let open = false;
+        for (const m of text.slice(0, pos).matchAll(STYLE_MARKER_RE)) {
+          const closer = m[0] === ']';
+          if (closer && !open) continue;
+          open = !closer;
+        }
+        return open;
+      }
+
+      /** Cuts text into { kind: 'image' | 'open' | 'close' | 'bracket' | 'text', s } pieces. */
+      function splitMarkup(text, startOpen) {
+        const pieces = [];
+        let open = startOpen;
+        let last = 0;
+        const addText = (str) => { if (str) pieces.push({ kind: 'text', s: str }); };
+        for (const m of text.matchAll(MARKUP_RE)) {
+          const tag = m[0];
+          let kind;
+          if (/^image/i.test(tag)) kind = 'image';
+          else if (tag === ']') kind = open ? 'close' : 'bracket';
+          else if (tag === '[') kind = 'bracket';
+          else kind = 'open';
+          addText(text.slice(last, m.index));
+          pieces.push({ kind, s: tag });
+          if (kind === 'open') open = true;
+          else if (kind === 'close') open = false;
+          last = m.index + tag.length;
+        }
+        addText(text.slice(last));
+        return pieces;
+      }
+
+      /** Puts `wanted` where the first words of the marked text were; image and style tags stay as they are. */
+      function swapTextKeepingTags(pieces, wanted) {
+        const first = pieces.findIndex((piece) => piece.kind === 'text' && /\S/.test(piece.s));
+        if (first < 0) return null; // only tags and blanks: nothing to replace
+        const core = wanted.trim();
+        let out = '';
+        pieces.forEach((piece, i) => {
+          if (piece.kind !== 'text') out += piece.s;
+          else if (i === first) out += piece.s.match(/^\s*/)[0] + core + piece.s.match(/\s*$/)[0];
+          else if (!/\S/.test(piece.s)) out += piece.s; // blanks stay, other words of the green text go
+        });
+        return out.replace(/(?:_style_[A-Za-z0-9_-]+_\[|_\*style_[^\[\]\n]*\[)\]/g, ''); // a style tag left empty goes too
+      }
+
+      /** No copied text is glued to an image tag in Compared text, and an image tag is not glued to the text it lands next to. */
+      function spaceAroundImages(value, from, to, text) {
+        if (!text) return text;
+        const closing = /[\s.,!?;)\]\-]/; // may follow an image tag without a space
+        const opening = /[\s\[(]/; // may stand in front of an image tag without a space
+        const before = value.slice(0, from);
+        const after = value.slice(to);
+        let result = text;
+        if (/image\[_image_\d+_\]$/i.test(before)) {
+          if (!closing.test(result[0])) result = ` ${result}`;
+        } else if (/^image\[_image_\d+_\]/i.test(result) && before && !opening.test(before[before.length - 1])) {
+          result = ` ${result}`;
+        }
+        if (/image\[_image_\d+_\]$/i.test(result)) {
+          if (after && !closing.test(after[0])) result += ' ';
+        } else if (/^image\[_image_\d+_\]/i.test(after) && !opening.test(result[result.length - 1])) {
+          result += ' ';
+        }
+        return result;
+      }
+
       function takeChange(piece) {
         if (!piece || piece.tagName !== 'DEL') return flashCounter('Red only', 'Shift+click copies red text. Cmd/Alt+click removes green text.');
         const [a0, a1] = piece.dataset.a.split(',').map(Number);
         const wanted = original.value.slice(a0, a1);
         if (TAG_RE.test(withoutImageTags(wanted))) return flashCounter('Has a tag', 'This text contains a style tag, so it is not copied. Image tags can be copied.');
-        if (!TAKEABLE_RE.test(wanted) || !HAS_TEXT_RE.test(wanted)) return flashCounter('Text only', 'Only plain text can be copied: no tags, images or hidden characters, and not just spaces.');
+        if (!TAKEABLE_RE.test(wanted) || !HAS_TEXT_RE.test(wanted)) return flashCounter('Text only', 'Only plain text can be copied: no style tags, hidden characters, and not just spaces.');
 
         const value = compared.value;
         const mate = [piece.nextSibling, piece.previousSibling].find((el) => el && el.nodeType === 1 && el.tagName === 'INS' && el.dataset.b);
         let from;
         let to;
+        let pieces = null; // the green text cut into tags and words, when it holds an image or style tag
+        let keepGreen = false; // green text that is only image tags stays, the red text goes next to it
         if (mate) {
           [from, to] = mate.dataset.b.split(',').map(Number);
-          if (TAG_RE.test(withoutImageTags(value.slice(from, to)))) return flashCounter('Has a tag', 'The green text next to it contains a style tag, so it is not replaced.');
+          const green = value.slice(from, to);
+          if (/image\[_image_\d+_\]|_style_|_\*style_|[\[\]]/i.test(green)) {
+            pieces = splitMarkup(green, styleOpenAt(value, from));
+            if (pieces.some((item) => item.kind === 'bracket' || (item.kind === 'text' && /[\[\]]/.test(item.s)))) return flashCounter('Has a tag', 'The green text next to it contains a bracket, so it is not replaced.');
+            if (pieces.some((item) => item.kind === 'open' || item.kind === 'close') && /image\[_image_\d+_\]/i.test(wanted)) return flashCounter('Has a tag', 'An image tag cannot go inside a style tag, so it is not copied here.');
+            if (!pieces.some((item) => item.kind === 'text' && /\S/.test(item.s))) {
+              keepGreen = true;
+              from = to = piece.nextSibling === mate ? from : to; // red shown first: before the image, otherwise after it
+            }
+          }
         } else {
           from = to = Number(piece.dataset.b.split(',')[0]);
           if (value[from - 1] === '[' || value[from] === ']') return flashCounter('Has a tag', 'It would land inside a style tag.');
         }
 
-        editCompared(from, to, adaptCase(wanted, original.value, a0, value, from));
+        // The case rules run on the copied words only, never on the tags around them.
+        let words = adaptCase(wanted, original.value, a0, value, from);
+        if (/image\[_image_\d+_\]/i.test(words)) words = spaceAfterMarkers(words); // image tags glued to words inside the copied text get spaces
+        const written = pieces && !keepGreen ? swapTextKeepingTags(pieces, words) : words;
+        editCompared(from, to, spaceAroundImages(value, from, to, written));
 
         renderDiff();
         const groups = differenceGroups();
@@ -6789,6 +6882,76 @@
         const walker = document.createTreeWalker(originalRich, NodeFilter.SHOW_TEXT);
         const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode); return nodes;
       }
+      /**
+       * Fix Grammar for Original text: the same punctuation and tag spacing as the Fix Grammar button of Compared text
+       * (a space after . , ! ? ; and around image tags, none before punctuation). Only spaces are added or taken out,
+       * and they go into the existing text nodes, so the pictures stay where they are. Returns true when something changed.
+       */
+      function fixOriginalGrammar() {
+        const segs = [];
+        const text = richOriginalText(segs);
+        const fixed = normalizeCommaGrammar(text);
+        if (fixed === text) return false;
+
+        const edits = []; // { at, remove } in the coordinates of `text`
+        let i = 0;
+        let j = 0;
+        while (i < text.length || j < fixed.length) {
+          if (i < text.length && j < fixed.length && text[i] === fixed[j]) { i++; j++; continue; }
+          if (i < text.length && /[ \t]/.test(text[i])) { edits.push({ at: i, remove: true }); i++; continue; }
+          if (j < fixed.length && fixed[j] === ' ') { edits.push({ at: i, remove: false }); j++; continue; }
+          return false; // the two texts differ by more than spaces: leave Original text alone
+        }
+
+        const segmentFor = (at, remove) => {
+          if (remove) return segs.find((seg) => at >= seg.start && at < seg.start + seg.node.nodeValue.length);
+          return segs.find((seg) => at > seg.start && at <= seg.start + seg.node.nodeValue.length)
+            || segs.find((seg) => at >= seg.start && at <= seg.start + seg.node.nodeValue.length);
+        };
+        for (let k = edits.length - 1; k >= 0; k--) { // last edit first, so earlier positions stay valid
+          const { at, remove } = edits[k];
+          const seg = segmentFor(at, remove);
+          if (!seg) continue;
+          const value = seg.node.nodeValue;
+          const local = at - seg.start;
+          seg.node.nodeValue = remove ? value.slice(0, local) + value.slice(local + 1) : `${value.slice(0, local)} ${value.slice(local)}`;
+        }
+        return true;
+      }
+
+      /**
+       * Empty rows (and rows with only spaces) go, as Fix Grammar does in Compared text. A row that holds a picture stays.
+       * If the result does not read exactly as the text with its empty rows removed, the editor is put back as it was.
+       */
+      function removeEmptyOriginalRows() {
+        const expected = removeEmptyRows(richOriginalText());
+        if (richOriginalText() === expected) return false;
+        const saved = originalRich.innerHTML;
+        const isEmptyLine = (nodes) => nodes.every((node) => (node.nodeType === Node.TEXT_NODE
+          ? !node.nodeValue.trim()
+          : node.nodeName !== 'IMG' && !(node.querySelector && node.querySelector('img')) && !(node.textContent || '').trim()));
+        const tidy = (box) => {
+          let line = [];
+          const flush = (br) => {
+            if (isEmptyLine(line)) { line.forEach((node) => node.remove()); if (br) br.remove(); }
+            line = [];
+          };
+          [...box.childNodes].forEach((node) => {
+            if (node.nodeName === 'BR') flush(node);
+            else if (node.nodeType === Node.ELEMENT_NODE && BLOCK_NODE.test(node.nodeName)) {
+              flush(null);
+              tidy(node);
+              if (isEmptyLine([node])) node.remove();
+            } else line.push(node);
+          });
+          flush(null);
+        };
+        tidy(originalRich);
+        if (richOriginalText() === expected) return originalRich.innerHTML !== saved;
+        originalRich.innerHTML = saved;
+        return false;
+      }
+
       addImageTagsButton.addEventListener('click', async () => {
         if (!originalRich.querySelector('img')) { showButtonMessage(addImageTagsButton, 'No images'); return; }
         await waitForImageFingerprints();
@@ -6801,8 +6964,11 @@
             next.nodeValue = (next.nodeValue || '').replace(/^\s*image\[_image_\d+_\]/i, tag);
           } else img.parentNode.insertBefore(document.createTextNode(tag), next);
         });
+        // Fix Grammar follows in the same click, so the tags, the spaces and the undo step all come from one press.
+        const spaced = fixOriginalGrammar();
+        const tidied = removeEmptyOriginalRows();
         originalRich.dispatchEvent(new InputEvent('input', { bubbles:true, inputType:'insertText' }));
-        showButtonMessage(addImageTagsButton, 'Tags added');
+        showButtonMessage(addImageTagsButton, spaced || tidied ? 'Tags + grammar' : 'Tags added');
       });
       removeImageTagsButton.addEventListener('click', () => {
         let removed = 0;
